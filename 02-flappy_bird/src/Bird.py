@@ -20,7 +20,10 @@ class Bird:
         self.width: float = width
         self.height: float = height
         self.vy: float = 0.0
+        self.vx: float = 0.0
         self.jumping: bool = False
+        self.movingRight: bool = False
+        self.movingLeft: bool = False
 
     def get_rect(self) -> pygame.Rect:
         return pygame.Rect(round(self.x), round(self.y), self.width, self.height)
