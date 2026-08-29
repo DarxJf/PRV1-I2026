@@ -20,8 +20,6 @@ input_handler.InputHandler.set_keyboard_action(input_handler.KEY_ESCAPE, "quit")
 input_handler.InputHandler.set_keyboard_action(input_handler.KEY_RETURN, "confirm")
 input_handler.InputHandler.set_mouse_click_action(input_handler.MOUSE_BUTTON_1, "jump")
 input_handler.InputHandler.set_keyboard_action(input_handler.KEY_SPACE, "pause")
-input_handler.InputHandler.set_keyboard_action(input_handler.KEY_UP, "Up")
-input_handler.InputHandler.set_keyboard_action(input_handler.KEY_DOWN, "Down")
 input_handler.InputHandler.set_keyboard_action(input_handler.KEY_w, "Right")
 input_handler.InputHandler.set_keyboard_action(input_handler.KEY_q, "Left")
 
@@ -66,6 +64,7 @@ TEXTURES = {
     "background": pygame.image.load(BASE_DIR / "assets" / "graphics" / "background.png"),
     "ground": pygame.image.load(BASE_DIR / "assets" / "graphics" / "ground.png"),
     "log": pygame.image.load(BASE_DIR / "assets" / "graphics" / "log.png"),
+    "ghost": pygame.image.load(BASE_DIR / "assets" / "graphics" / "ghost.png")
 }
 # The top log of every pair is the same image, flipped upside down.
 TEXTURES["log_inverted"] = pygame.transform.flip(TEXTURES["log"], False, True)
@@ -76,6 +75,9 @@ SOUNDS = {
     "hurt": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "hurt.wav"),
     "score": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "score.wav"),
     "paused": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "paused.mp3"),
+    "ghost": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "ghost.mp3"),
+    "pick": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "pick.mp3"),
+    "choke": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "choke.mp3"),
 }
 
 pygame.mixer.music.load(BASE_DIR / "assets" / "sounds" / "marios_way.ogg")

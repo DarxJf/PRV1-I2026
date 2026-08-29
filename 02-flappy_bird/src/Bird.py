@@ -21,12 +21,14 @@ class Bird:
         self.height: float = height
         self.vy: float = 0.0
         self.vx: float = 0.0
+        self.ghost_timer: float = 0.0
         self.jumping: bool = False
+        self.is_ghost: bool = False
         self.movingRight: bool = False
         self.movingLeft: bool = False
 
     def get_rect(self) -> pygame.Rect:
-        return pygame.Rect(round(self.x), round(self.y), self.width, self.height)
+        return pygame.Rect(round(self.x), round(self.y), self.width - 3, self.height - 3)
 
     def jump(self) -> None:
         self.jumping = True
@@ -42,4 +44,9 @@ class Bird:
         self.y += self.vy * dt
 
     def render(self, surface: pygame.Surface) -> None:
-        surface.blit(settings.TEXTURES["bird"], self.get_rect())
+        if self.is_ghost:
+            g_texture = settings.TEXTURES["bird"].copy()
+            g_texture.set_alpha(90)
+            surface.blit(g_texture, self.get_rect())
+        else:
+            surface.blit(settings.TEXTURES["bird"], self.get_rect())

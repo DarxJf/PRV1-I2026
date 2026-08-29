@@ -19,6 +19,7 @@ class LogPair:
     def __init__(self, x: float, y: float) -> None:
         self.x: float = x
         self.y: float = y
+        self.gap: float = settings.LOGS_GAP
         self.scored: bool = False
 
     def get_top_rect(self) -> pygame.Rect:
@@ -27,7 +28,7 @@ class LogPair:
     def get_bottom_rect(self) -> pygame.Rect:
         return pygame.Rect(
             round(self.x),
-            round(self.y + settings.LOGS_GAP + settings.LOG_HEIGHT),
+            round(self.y + self.gap + settings.LOG_HEIGHT),
             settings.LOG_WIDTH,
             settings.LOG_HEIGHT,
         )
