@@ -1,0 +1,14 @@
+Power-up de captura de pelota: 🎾 Crea un nuevo power-up que permita al jugador atrapar la pelota de 
+nuevo. Cuando el jugador lo obtenga y la pelota colisione con la paleta, esta quedará adherida en 
+el punto de impacto en lugar de rebotar. Tal como en el estado de saque, el jugador podrá mover la 
+paleta y lanzar la pelota nuevamente presionando la barra espaciadora. Tendrá un tiempo de vida 
+limitado a tu criterio.
+
+Power-up de cañones: 🚀 Crea un power-up que añada un par de cañones en los extremos 
+(izquierdo y derecho) de la paleta. Al presionar una tecla (por ejemplo, la F), 
+dispararán proyectiles verticalmente de forma simultánea para destruir ladrillos. 
+El comportamiento de impacto puede ser: romper todos los ladrillos a su paso hasta el techo, 
+romper solo uno y destruirse, o golpear como la pelota. No se podrán disparar más proyectiles 
+mientras haya otros activos en la escena.
+
+Power-up adicional: ✨ Crea un tercer power-up de tu propia elección, el cual deberás documentar y describir detalladamente en el archivo README.md.
