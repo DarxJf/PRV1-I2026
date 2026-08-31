@@ -1,6 +1,6 @@
 """
 ISPPV1 2023
-Study Case: Breakout
+Study Case: Match-3
 
 Author: Alejandro Mujica
 alejandro.j.mujic4@gmail.com
@@ -15,89 +15,62 @@ from pathlib import Path
 import pygame
 
 from gale import input_handler
-from gale.frames import generate_frames
 
-from src.utilities.frames import (
-    generate_paddle_frames,
-    generate_ball_frames,
-    generate_brick_frames,
-    generate_powerups_frames,
-)
+from src.frames_utility import generate_tile_frames
 
 input_handler.InputHandler.set_keyboard_action(input_handler.KEY_ESCAPE, "quit")
+input_handler.InputHandler.set_keyboard_action(input_handler.KEY_KP_ENTER, "enter")
 input_handler.InputHandler.set_keyboard_action(input_handler.KEY_RETURN, "enter")
-input_handler.InputHandler.set_keyboard_action(input_handler.KEY_UP, "move_up")
-input_handler.InputHandler.set_keyboard_action(input_handler.KEY_RIGHT, "move_right")
-input_handler.InputHandler.set_keyboard_action(input_handler.KEY_DOWN, "move_down")
-input_handler.InputHandler.set_keyboard_action(input_handler.KEY_LEFT, "move_left")
-input_handler.InputHandler.set_keyboard_action(input_handler.KEY_SPACE, "pause")
-input_handler.InputHandler.set_keyboard_action(input_handler.KEY_q, "shoot")
+input_handler.InputHandler.set_keyboard_action(input_handler.KEY_UP, "up")
+input_handler.InputHandler.set_keyboard_action(input_handler.KEY_DOWN, "down")
+input_handler.InputHandler.set_mouse_click_action(input_handler.MOUSE_BUTTON_1, "click")
 
-TITLE = "Breakout"
+TITLE = "Match 3"
 
-# Size of our actual window
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
 
-# Size we are trying to emulate
-VIRTUAL_WIDTH = 432
-VIRTUAL_HEIGHT = 243
+VIRTUAL_WIDTH = 512
+VIRTUAL_HEIGHT = 288
 
-PADDLE_SPEED = 200
+BOARD_WIDTH = 8
+BOARD_HEIGHT = 8
 
-NUM_HIGHSCORES = 10
+TILE_SIZE = 32
 
-# Num points base to recover a live
-LIVE_POINTS_BASE = 2000
+NUM_VARIETIES = 6
+NUM_COLORS = 18
 
-PADDLE_GROW_UP_POINTS = 200
+BACKGROUND_SCROLL_SPEED = 40
+BACKGROUND_LOOPING_POINT = -1024 + VIRTUAL_WIDTH - 4 + 51
 
-POWERUP_SPEED = 50
+LEVEL_TIME = 60
 
 BASE_DIR = Path(__file__).parent
-
-SOUNDS = {
-    "paddle_hit": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "paddle_hit.wav"),
-    "selected": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "selected.wav"),
-    "brick_hit_1": pygame.mixer.Sound(
-        BASE_DIR / "assets" / "sounds" / "brick_hit_1.wav"
-    ),
-    "brick_hit_2": pygame.mixer.Sound(
-        BASE_DIR / "assets" / "sounds" / "brick_hit_2.wav"
-    ),
-    "wall_hit": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "wall_hit.wav"),
-    "hurt": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "hurt.wav"),
-    "level_complete": pygame.mixer.Sound(
-        BASE_DIR / "assets" / "sounds" / "level_complete.wav"
-    ),
-    "high_score": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "high_score.wav"),
-    "life": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "life.wav"),
-    "grow_up": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "grow_up.wav"),
-    "pause": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "pause.wav"),
-}
 
 TEXTURES = {
     "background": pygame.image.load(
         BASE_DIR / "assets" / "graphics" / "background.png"
     ),
-    "spritesheet": pygame.image.load(BASE_DIR / "assets" / "graphics" / "breakout.png"),
-    "hearts": pygame.image.load(BASE_DIR / "assets" / "graphics" / "hearts.png"),
-    "arrows": pygame.image.load(BASE_DIR / "assets" / "graphics" / "arrows.png"),
-    "cannon": pygame.image.load(BASE_DIR / "assets" / "graphics" / "cannon.png"),
+    "tiles": pygame.image.load(BASE_DIR / "assets" / "graphics" / "match3.png"),
 }
 
-FRAMES = {
-    "paddles": generate_paddle_frames(),
-    "balls": generate_ball_frames(),
-    "bricks": generate_brick_frames(TEXTURES["spritesheet"]),
-    "hearts": generate_frames(TEXTURES["hearts"], 10, 9),
-    "arrows": generate_frames(TEXTURES["arrows"], 24, 24),
-    "powerups": generate_powerups_frames(),
+FRAMES = {"tiles": generate_tile_frames(TEXTURES["tiles"])}
+
+SOUNDS = {
+    "clock": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "clock.wav"),
+    "error": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "error.wav"),
+    "game-over": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "game-over.wav"),
+    "match": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "match.wav"),
+    "next-level": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "next-level.wav"),
+    "select": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "select.wav"),
 }
+
+pygame.mixer.music.load(BASE_DIR / "assets" / "sounds" / "music.mp3")
 
 FONTS = {
-    "tiny": pygame.font.Font(BASE_DIR / "assets" / "fonts" / "font.ttf", 6),
-    "small": pygame.font.Font(BASE_DIR / "assets" / "fonts" / "font.ttf", 8),
-    "medium": pygame.font.Font(BASE_DIR / "assets" / "fonts" / "font.ttf", 12),
-    "large": pygame.font.Font(BASE_DIR / "assets" / "fonts" / "font.ttf", 24),
+    "small": pygame.font.Font(BASE_DIR / "assets" / "fonts" / "font.ttf", 12),
+    "medium": pygame.font.Font(BASE_DIR / "assets" / "fonts" / "font.ttf", 24),
+    "large": pygame.font.Font(BASE_DIR / "assets" / "fonts" / "font.ttf", 48),
+    "huge": pygame.font.Font(BASE_DIR / "assets" / "fonts" / "font.ttf", 64),
 }

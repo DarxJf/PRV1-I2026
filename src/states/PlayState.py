@@ -1,299 +1,214 @@
 """
 ISPPV1 2023
-Study Case: Breakout
+Study Case: Match-3
 
 Author: Alejandro Mujica
 alejandro.j.mujic4@gmail.com
 
-This file contains the class to define the Play state.
+This file contains the class PlayState.
 """
 
-import random
+from typing import Dict, Any, List
 
 import pygame
 
-from gale.factory import AbstractFactory, Factory
-from gale.state import BaseState
 from gale.input_handler import InputData
+from gale.state import BaseState
 from gale.text import render_text
+from gale.timer import Timer
 
 import settings
-from src.powerups import PowerUp
-from src.Ammo import Ammo 
 
 
 class PlayState(BaseState):
-    def enter(self, **params: dict):
-        self.level = params["level"]
-        self.score = params["score"]
-        self.lives = params["lives"]
-        self.paddle = params["paddle"]
-        self.balls = params["balls"]
-        self.ammo = params.get("ammo", [])
-        self.brickset = params["brickset"]
-        self.live_factor = params["live_factor"]
-        self.points_to_next_live = params["points_to_next_live"]
-        self.points_to_next_grow_up = (
-            self.score
-            + settings.PADDLE_GROW_UP_POINTS * (self.paddle.size + 1) * self.level
+    def enter(self, **enter_params: Dict[str, Any]) -> None:
+        self.level = enter_params["level"]
+        self.board = enter_params["board"]
+        self.score = enter_params["score"]
+
+        # Position in the grid which we are highlighting
+        self.board_highlight_i1 = -1
+        self.board_highlight_j1 = -1
+        self.board_highlight_i2 = -1
+        self.board_highlight_j2 = -1
+
+        self.highlighted_tile = False
+
+        self.active = True
+
+        self.timer = settings.LEVEL_TIME
+
+        self.goal_score = self.level * 1.25 * 1000
+
+        # A surface that supports alpha to highlight a selected tile
+        self.tile_alpha_surface = pygame.Surface(
+            (settings.TILE_SIZE, settings.TILE_SIZE), pygame.SRCALPHA
         )
-        self.powerups = params.get("powerups", [])
+        pygame.draw.rect(
+            self.tile_alpha_surface,
+            (255, 255, 255, 96),
+            pygame.Rect(0, 0, settings.TILE_SIZE, settings.TILE_SIZE),
+            border_radius=7,
+        )
 
-        if not params.get("resume", False):
-            self.balls[0].vx = random.randint(-80, 80)
-            self.balls[0].vy = random.randint(-170, -100)
-            settings.SOUNDS["paddle_hit"].play()
+        # A surface that supports alpha to draw behind the text.
+        self.text_alpha_surface = pygame.Surface((212, 136), pygame.SRCALPHA)
+        pygame.draw.rect(
+            self.text_alpha_surface, (56, 56, 56, 234), pygame.Rect(0, 0, 212, 136)
+        )
 
-        self.powerups_abstract_factory = AbstractFactory("src.powerups")
-        self.ammo_factory = Factory(Ammo)
+        def decrement_timer():
+            self.timer -= 1
 
-    def update(self, dt: float) -> None:
-        self.paddle.update(dt)
+            # Play warning sound on timer if we get low
+            if self.timer <= 5:
+                settings.SOUNDS["clock"].play()
 
-        if self.paddle.cannon:
-            for ammo in self.ammo:
-                ammo.update(dt)
+        Timer.every(1, decrement_timer)
 
-                if ammo.y < 0:
-                    ammo.active = False
-                    continue
+    def update(self, _: float) -> None:
+        if self.timer <= 0:
+            Timer.clear()
+            settings.SOUNDS["game-over"].play()
+            self.state_machine.change("game-over", score=self.score)
 
-                if ammo.collides(self.brickset):
-                    brick = self.brickset.get_colliding_brick(ammo.get_collision_rect())
-                
-                    if brick is not None:
-                        brick.hit()
-                        self.score += brick.score()
-                        ammo.active = False
-
-        self.ammo = [a for a in self.ammo if a.active or not self.paddle.cannon]
-
-        for ball in self.balls:
-            if getattr(ball, 'caught', False):
-                ball.x = self.paddle.x + getattr(ball, 'catch_offset', 0)
-                continue
-
-            ball.update(dt)
-            ball.solve_world_boundaries()
-
-            # Check collision with the paddle
-            if ball.collides(self.paddle) and self.paddle.catch:
-                ball.vx = 0
-                ball.vy = 0
-                ball.y = self.paddle.y - ball.height
-                ball.caught = True
-                ball.catch_offset = ball.x - self.paddle.x
-            elif ball.collides(self.paddle):
-                settings.SOUNDS["paddle_hit"].stop()
-                settings.SOUNDS["paddle_hit"].play()
-                ball.rebound(self.paddle)
-                ball.push(self.paddle)
-
-            # Check collision with brickset
-            if not ball.collides(self.brickset):
-                continue
-
-            brick = self.brickset.get_colliding_brick(ball.get_collision_rect())
-
-            if brick is None:
-                continue
-
-            brick.hit()
-            self.score += brick.score()
-            ball.rebound(brick)
-
-            # Check earn life
-            if self.score >= self.points_to_next_live:
-                settings.SOUNDS["life"].play()
-                self.lives = min(3, self.lives + 1)
-                self.live_factor += 0.5
-                self.points_to_next_live += settings.LIVE_POINTS_BASE * self.live_factor
-
-            # Check growing up of the paddle
-            if self.score >= self.points_to_next_grow_up:
-                settings.SOUNDS["grow_up"].play()
-                self.points_to_next_grow_up += (
-                    settings.PADDLE_GROW_UP_POINTS * (self.paddle.size + 1) * self.level
-                )
-                self.paddle.inc_size()
-
-            # Chance to generate two more balls
-            # if random.random() < 0.1:
-            #     r = brick.get_collision_rect()
-            #     self.powerups.append(
-            #         self.powerups_abstract_factory.get_factory("TwoMoreBall").create(
-            #             r.centerx - 8, r.centery - 8
-            #         )
-            #     )
-
-            # if random.random() < 0.1:
-            #     r = brick.get_collision_rect()
-            #     self.powerups.append(
-            #         self.powerups_abstract_factory.get_factory("CatchBall").create(
-            #             r.centerx - 8, r.centery - 8
-            #         )
-            #     )
-
-            # if random.random() < 0.1:
-            #     r = brick.get_collision_rect()
-            #     self.powerups.append(
-            #         self.powerups_abstract_factory.get_factory("CannonGun").create(
-            #             r.centerx - 8, r.centery - 8
-            #         )
-            #     )
-
-            # if random.random() < 0.05:
-            #     r = brick.get_collision_rect()
-            #     self.powerups.append(
-            #         self.powerups_abstract_factory.get_factory("LifePlus").create(
-            #             r.centerx - 8, r.centery - 8
-            #         )
-            #     )
-
-            if random.random() < 0.2:
-                r = brick.get_collision_rect()
-
-                # Lista de opciones disponibles
-                opciones_powerups = ["TwoMoreBall", "CatchBall", "CannonGun", "LifePlus"]
-                
-                # Asignamos el peso (probabilidad relativa) a cada power-up.
-                probabilidades = [35, 35, 25, 5]
-
-                # random.choices devuelve una lista, por eso seleccionamos el índice [0]
-                powerup_elegido = random.choices(opciones_powerups, weights=probabilidades, k=1)[0]
-
-                self.powerups.append(
-                    self.powerups_abstract_factory.get_factory(powerup_elegido).create(
-                        r.centerx - 8, r.centery - 8
-                    )
-                )
-
-        # Removing all balls that are not in play
-        self.balls = [ball for ball in self.balls if ball.active]
-
-        self.brickset.update(dt)
-
-        if not self.balls:
-            self.paddle.cannon = False
-            self.paddle.catch  = False
-
-            self.lives -= 1
-            if self.lives == 0:
-                self.state_machine.change("game_over", score=self.score)
-            else:
-                self.paddle.dec_size()
-                self.state_machine.change(
-                    "serve",
-                    level=self.level,
-                    score=self.score,
-                    lives=self.lives,
-                    paddle=self.paddle,
-                    brickset=self.brickset,
-                    points_to_next_live=self.points_to_next_live,
-                    live_factor=self.live_factor,
-                )
-
-        # Update powerups
-        for powerup in self.powerups:
-            powerup.update(dt)
-
-            if powerup.collides(self.paddle):
-                powerup.take(self)
-
-        # Remove powerups that are not in play
-        self.powerups = [p for p in self.powerups if p.active]
-
-        # Check victory
-        if self.brickset.size == 1 and next(
-            (True for _, b in self.brickset.bricks.items() if b.broken), False
-        ):
-            self.state_machine.change(
-                "victory",
-                lives=self.lives,
-                level=self.level,
-                score=self.score,
-                paddle=self.paddle,
-                balls=self.balls,
-                points_to_next_live=self.points_to_next_live,
-                live_factor=self.live_factor,
-            )
+        if self.score >= self.goal_score:
+            Timer.clear()
+            settings.SOUNDS["next-level"].play()
+            self.state_machine.change("begin", level=self.level + 1, score=self.score)
 
     def render(self, surface: pygame.Surface) -> None:
-        heart_x = settings.VIRTUAL_WIDTH - 120
+        self.board.render(surface)
 
-        i = 0
-        # Draw filled hearts
-        while i < self.lives:
-            surface.blit(
-                settings.TEXTURES["hearts"], (heart_x, 5), settings.FRAMES["hearts"][0]
-            )
-            heart_x += 11
-            i += 1
+        if self.highlighted_tile:
+            x = self.highlighted_j1 * settings.TILE_SIZE + self.board.x
+            y = self.highlighted_i1 * settings.TILE_SIZE + self.board.y
+            surface.blit(self.tile_alpha_surface, (x, y))
 
-        # Draw empty hearts
-        while i < 3:
-            surface.blit(
-                settings.TEXTURES["hearts"], (heart_x, 5), settings.FRAMES["hearts"][1]
-            )
-            heart_x += 11
-            i += 1
-
+        surface.blit(self.text_alpha_surface, (16, 16))
+        render_text(
+            surface,
+            f"Level: {self.level}",
+            settings.FONTS["medium"],
+            30,
+            24,
+            (99, 155, 255),
+            shadowed=True,
+        )
         render_text(
             surface,
             f"Score: {self.score}",
-            settings.FONTS["tiny"],
-            settings.VIRTUAL_WIDTH - 400,
-            5,
-            (255, 255, 255),
+            settings.FONTS["medium"],
+            30,
+            52,
+            (99, 155, 255),
+            shadowed=True,
+        )
+        render_text(
+            surface,
+            f"Goal: {self.goal_score}",
+            settings.FONTS["medium"],
+            30,
+            80,
+            (99, 155, 255),
+            shadowed=True,
+        )
+        render_text(
+            surface,
+            f"Timer: {self.timer}",
+            settings.FONTS["medium"],
+            30,
+            108,
+            (99, 155, 255),
+            shadowed=True,
         )
 
-        self.brickset.render(surface)
-
-        self.paddle.render(surface)
-
-        for ball in self.balls:
-            ball.render(surface)
-
-        for powerup in self.powerups:
-            powerup.render(surface)
-
-        if self.paddle.cannon:
-            for ammo in self.ammo:
-                ammo.render(surface)
-
     def on_input(self, input_id: str, input_data: InputData) -> None:
-        if input_id == "enter" and input_data.pressed:
-            for ball in self.balls:
-                if getattr(ball, 'caught', False):
-                    ball.caught = False
-                    ball.vx = random.randint(-80, 80)
-                    ball.vy = random.randint(-170, -100)
-                    settings.SOUNDS["paddle_hit"].play()
-        elif input_id == "shoot" and input_data.pressed:
-            if self.paddle.cannon and len(self.ammo) == 0:
-                self.ammo.append(self.ammo_factory.create(self.paddle.x, self.paddle.y))
-                self.ammo.append(self.ammo_factory.create(self.paddle.x + self.paddle.width - 8, 
-                                                                self.paddle.y))
-        elif input_id == "move_left":
-            if input_data.pressed:
-                self.paddle.vx = -settings.PADDLE_SPEED
-            elif input_data.released and self.paddle.vx < 0:
-                self.paddle.vx = 0
-        elif input_id == "move_right":
-            if input_data.pressed:
-                self.paddle.vx = settings.PADDLE_SPEED
-            elif input_data.released and self.paddle.vx > 0:
-                self.paddle.vx = 0
-        elif input_id == "pause" and input_data.pressed:
-            self.state_machine.change(
-                "pause",
-                level=self.level,
-                score=self.score,
-                lives=self.lives,
-                paddle=self.paddle,
-                balls=self.balls,
-                brickset=self.brickset,
-                points_to_next_live=self.points_to_next_live,
-                live_factor=self.live_factor,
-                powerups=self.powerups,
-            )
+        if not self.active:
+            return
+
+        if input_id == "click" and input_data.pressed:
+            pos_x, pos_y = input_data.position
+            pos_x = pos_x * settings.VIRTUAL_WIDTH // settings.WINDOW_WIDTH
+            pos_y = pos_y * settings.VIRTUAL_HEIGHT // settings.WINDOW_HEIGHT
+            i = (pos_y - self.board.y) // settings.TILE_SIZE
+            j = (pos_x - self.board.x) // settings.TILE_SIZE
+
+            if 0 <= i < settings.BOARD_HEIGHT and 0 <= j <= settings.BOARD_WIDTH:
+                if not self.highlighted_tile:
+                    self.highlighted_tile = True
+                    self.highlighted_i1 = i
+                    self.highlighted_j1 = j
+                else:
+                    self.highlighted_i2 = i
+                    self.highlighted_j2 = j
+                    di = abs(self.highlighted_i2 - self.highlighted_i1)
+                    dj = abs(self.highlighted_j2 - self.highlighted_j1)
+
+                    if di <= 1 and dj <= 1 and di != dj:
+                        self.active = False
+                        tile1 = self.board.tiles[self.highlighted_i1][
+                            self.highlighted_j1
+                        ]
+                        tile2 = self.board.tiles[self.highlighted_i2][
+                            self.highlighted_j2
+                        ]
+
+                        def arrive():
+                            tile1 = self.board.tiles[self.highlighted_i1][
+                                self.highlighted_j1
+                            ]
+                            tile2 = self.board.tiles[self.highlighted_i2][
+                                self.highlighted_j2
+                            ]
+                            (
+                                self.board.tiles[tile1.i][tile1.j],
+                                self.board.tiles[tile2.i][tile2.j],
+                            ) = (
+                                self.board.tiles[tile2.i][tile2.j],
+                                self.board.tiles[tile1.i][tile1.j],
+                            )
+                            tile1.i, tile1.j, tile2.i, tile2.j = (
+                                tile2.i,
+                                tile2.j,
+                                tile1.i,
+                                tile1.j,
+                            )
+                            self._calculate_matches([tile1, tile2])
+
+                        # Swap tiles
+                        Timer.tween(
+                            0.25,
+                            [
+                                (tile1, {"x": tile2.x, "y": tile2.y}),
+                                (tile2, {"x": tile1.x, "y": tile1.y}),
+                            ],
+                            on_finish=arrive,
+                        )
+
+                    self.highlighted_tile = False
+
+    def _calculate_matches(self, tiles: List) -> None:
+        matches = self.board.calculate_matches_for(tiles)
+
+        if matches is None:
+            self.active = True
+            return
+
+        settings.SOUNDS["match"].stop()
+        settings.SOUNDS["match"].play()
+
+        for match in matches:
+            self.score += len(match) * 50
+
+        self.board.remove_matches()
+
+        falling_tiles = self.board.get_falling_tiles()
+
+        Timer.tween(
+            0.25,
+            falling_tiles,
+            on_finish=lambda: self._calculate_matches(
+                [item[0] for item in falling_tiles]
+            ),
+        )

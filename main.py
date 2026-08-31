@@ -1,6 +1,6 @@
 """
 ISPPV1 2023
-Study Case: Breakout
+Study Case: Match-3
 
 Author: Alejandro Mujica
 alejandro.j.mujic4@gmail.com
@@ -8,8 +8,8 @@ alejandro.j.mujic4@gmail.com
 This file contains the main program to run the game.
 """
 
-from src.Breakout import Breakout
+from src.Match3 import Match3
 
 if __name__ == "__main__":
-    game = Breakout()
-    game.exec()
+    match3 = Match3()
+    match3.exec()

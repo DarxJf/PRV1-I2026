@@ -1,48 +1,47 @@
 """
 ISPPV1 2023
-Study Case: Breakout
+Study Case: Match-3
 
 Author: Alejandro Mujica
 alejandro.j.mujic4@gmail.com
 
-This file contains the class Breakout as a specialization of gale.Game
+This file contains the class Match3 as a specialization of gale.Game
 """
 
 import pygame
 
 from gale.game import Game
-from gale.state import StateMachine
 from gale.input_handler import InputData
+from gale.state import StateMachine
 
 import settings
-
 from src import states
 
 
-class Breakout(Game):
+class Match3(Game):
     def init(self) -> None:
+        pygame.mixer.music.play(loops=-1)
         self.state_machine = StateMachine(
             {
-                "start": states.StartState,
-                "high_score": states.HighScoreState,
-                "enter_high_score": states.EnterHighScoreState,
-                "game_over": states.GameOverState,
-                "paddle_select": states.PaddleSelectState,
-                "serve": states.ServeState,
+                "start": lambda sm: states.StartState(sm, self),
+                "begin": states.BeginGameState,
                 "play": states.PlayState,
-                "victory": states.VictoryState,
-                "pause": states.PauseState,
+                "game-over": states.GameOverState,
             }
         )
         self.state_machine.change("start")
-        # pygame.mixer_music.load(settings.BASE_DIR / "assets" / "sounds" / "music.ogg")
-        # pygame.mixer_music.play(loops=-1)
+        self.background_x = 0
 
     def update(self, dt: float) -> None:
+        self.background_x -= settings.BACKGROUND_SCROLL_SPEED * dt
+
+        if self.background_x <= settings.BACKGROUND_LOOPING_POINT:
+            self.background_x = 0
+
         self.state_machine.update(dt)
 
     def render(self, surface: pygame.Surface) -> None:
-        surface.blit(settings.TEXTURES["background"], (0, 0))
+        surface.blit(settings.TEXTURES["background"], (self.background_x, 0))
         self.state_machine.render(surface)
 
     def on_input(self, input_id: str, input_data: InputData) -> None:
