@@ -26,6 +26,9 @@ class Board:
         self.tiles: List[List[Tile]] = []
         self._initialize_tiles()
 
+        if not self.has_matches():
+            self.shuffle_board()
+
     def render(self, surface: pygame.Surface) -> None:
         for row in self.tiles:
             for tile in row:
@@ -208,3 +211,83 @@ class Board:
                     tweens.append((tile, {"y": tile.i * settings.TILE_SIZE}))
 
         return tweens
+
+    def has_matches(self,) -> bool:
+        for i in range(settings.BOARD_HEIGHT):
+            for j in range(settings.BOARD_WIDTH):
+                act_tile = self.tiles[i][j]
+
+                if act_tile is None:
+                    continue
+
+                # Simular intercambio con la vecina de la DERECHA
+                if j < settings.BOARD_WIDTH - 1:
+                    n_tile = self.tiles[i][j + 1]
+                    if n_tile is not None:
+                        # Intercambio lógico temporal
+                        self.tiles[i][j], self.tiles[i][j + 1] = n_tile, act_tile
+                        act_tile.i, act_tile.j, n_tile.i, n_tile.j = n_tile.i, n_tile.j, act_tile.i, act_tile.j
+
+                        # Evaluar
+                        matches = self.calculate_matches_for([act_tile, n_tile])
+                        self.matches = []
+
+                        # Revertir intercambio lógico
+                        self.tiles[i][j], self.tiles[i][j + 1] = act_tile, n_tile
+                        act_tile.i, act_tile.j, n_tile.i, n_tile.j = n_tile.i, n_tile.j, act_tile.i, act_tile.j
+
+                        if matches is not None:
+                            return True
+
+                # Simular intercambio con la vecina de ABAJO
+                if i < settings.BOARD_HEIGHT - 1:
+                    n_tile = self.tiles[i + 1][j]
+                    if n_tile is not None:
+                        # Intercambio lógico temporal
+                        self.tiles[i][j], self.tiles[i + 1][j] = n_tile, act_tile
+                        act_tile.i, act_tile.j, n_tile.i, n_tile.j = n_tile.i, n_tile.j, act_tile.i, act_tile.j
+
+                        # Evaluar
+                        matches = self.calculate_matches_for([act_tile, n_tile])
+                        self.matches = []
+
+                        # Revertir intercambio lógico
+                        self.tiles[i][j], self.tiles[i + 1][j] = act_tile, n_tile
+                        act_tile.i, act_tile.j, n_tile.i, n_tile.j = n_tile.i, n_tile.j, act_tile.i, act_tile.j
+
+                        if matches is not None:
+                            return True
+
+        return False
+
+    def shuffle_board(self) -> None:
+        while True:
+            # Extraer los datos (color, variedad) de todas las baldosas actuales
+            tile_data = []
+            for i in range(settings.BOARD_HEIGHT):
+                for j in range(settings.BOARD_WIDTH):
+                    if self.tiles[i][j] is not None:
+                        tile_data.append((self.tiles[i][j].color, self.tiles[i][j].variety))
+
+            random.shuffle(tile_data)
+
+            # Reasignar las baldosas a la matriz
+            idx = 0
+            for i in range(settings.BOARD_HEIGHT):
+                for j in range(settings.BOARD_WIDTH):
+                    # siguiente color válido en la lista mezclada no genere un match accidental
+                    valid_idx = idx
+                    while valid_idx < len(tile_data) and self._is_match_generated(i, j, tile_data[valid_idx][0]):
+                        valid_idx += 1
+
+                    # intercambiar con la posición actual (idx)
+                    if valid_idx < len(tile_data):
+                        tile_data[idx], tile_data[valid_idx] = tile_data[valid_idx], tile_data[idx]
+
+                    # Instancia de la nueva baldosa con el color/variedad seguro
+                    color, variety = tile_data[idx]
+                    self.tiles[i][j] = Tile(i, j, color, variety)
+                    idx += 1
+
+            if self.has_matches():
+                break

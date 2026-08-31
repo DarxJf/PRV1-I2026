@@ -127,73 +127,118 @@ class PlayState(BaseState):
         if not self.active:
             return
 
-        if input_id == "click" and input_data.pressed:
+        if input_id == "click":
             pos_x, pos_y = input_data.position
             pos_x = pos_x * settings.VIRTUAL_WIDTH // settings.WINDOW_WIDTH
             pos_y = pos_y * settings.VIRTUAL_HEIGHT // settings.WINDOW_HEIGHT
             i = (pos_y - self.board.y) // settings.TILE_SIZE
             j = (pos_x - self.board.x) // settings.TILE_SIZE
 
-            if 0 <= i < settings.BOARD_HEIGHT and 0 <= j <= settings.BOARD_WIDTH:
-                if not self.highlighted_tile:
-                    self.highlighted_tile = True
-                    self.highlighted_i1 = i
-                    self.highlighted_j1 = j
-                else:
-                    self.highlighted_i2 = i
-                    self.highlighted_j2 = j
-                    di = abs(self.highlighted_i2 - self.highlighted_i1)
-                    dj = abs(self.highlighted_j2 - self.highlighted_j1)
+            if input_data.pressed:
+                if 0 <= i < settings.BOARD_HEIGHT and 0 <= j < settings.BOARD_WIDTH:
+                    if getattr(self, 'active', True):
+                        self.dragged_tile = self.board.tiles[i][j]
+                        self.dragged_i = i
+                        self.dragged_j = j
+                        if not self.highlighted_tile:
+                            self.highlighted_tile = True
+                            self.highlighted_i1 = self.dragged_i
+                            self.highlighted_j1 = self.dragged_j
+                        
 
-                    if di <= 1 and dj <= 1 and di != dj:
-                        self.active = False
-                        tile1 = self.board.tiles[self.highlighted_i1][
-                            self.highlighted_j1
-                        ]
-                        tile2 = self.board.tiles[self.highlighted_i2][
-                            self.highlighted_j2
-                        ]
+            elif input_data.released:
+                if hasattr(self, 'dragged_tile') and self.dragged_tile is not None:
+                    if 0 <= i < settings.BOARD_HEIGHT and 0 <= j < settings.BOARD_WIDTH:
 
-                        def arrive():
-                            tile1 = self.board.tiles[self.highlighted_i1][
-                                self.highlighted_j1
-                            ]
-                            tile2 = self.board.tiles[self.highlighted_i2][
-                                self.highlighted_j2
-                            ]
-                            (
-                                self.board.tiles[tile1.i][tile1.j],
-                                self.board.tiles[tile2.i][tile2.j],
-                            ) = (
-                                self.board.tiles[tile2.i][tile2.j],
-                                self.board.tiles[tile1.i][tile1.j],
+                        di = abs(i - self.dragged_i)
+                        dj = abs(j - self.dragged_j)
+                        self.highlighted_i2 = i
+                        self.highlighted_j2 = j
+
+                        if di <= 1 and dj <= 1 and di != dj:
+                            self.active = False
+                            tile1 = self.dragged_tile
+                            tile2 = self.board.tiles[i][j]
+
+                            def undo():
+                                (
+                                    self.board.tiles[tile1.i][tile1.j],
+                                    self.board.tiles[tile2.i][tile2.j],
+                                ) = (
+                                    self.board.tiles[tile2.i][tile2.j],
+                                    self.board.tiles[tile1.i][tile1.j],
+                                )
+                            
+                                tile1.i, tile1.j, tile2.i, tile2.j = (
+                                    tile2.i, tile2.j, tile1.i, tile1.j,
+                                )
+
+                            def arrive():
+                                tile1 = self.board.tiles[self.dragged_i][self.dragged_j]
+                                tile2 = self.board.tiles[i][j]
+
+                                (
+                                    self.board.tiles[tile1.i][tile1.j],
+                                    self.board.tiles[tile2.i][tile2.j],
+                                ) = (
+                                    self.board.tiles[tile2.i][tile2.j],
+                                    self.board.tiles[tile1.i][tile1.j],
+                                )
+                            
+                                tile1.i, tile1.j, tile2.i, tile2.j = (
+                                    tile2.i, tile2.j, tile1.i, tile1.j,
+                                )
+
+                                match = self._calculate_matches([tile1, tile2])
+                                if not match:
+                                    Timer.tween(
+                                        0.25,
+                                        [
+                                            (tile1, {"x": tile2.x, "y": tile2.y}),
+                                            (tile2, {"x": tile1.x, "y": tile1.y}),
+                                        ],
+                                        on_finish=undo,
+                                    )
+                                    
+
+                            Timer.tween(
+                                0.25,
+                                [
+                                    (tile1, {"x": tile2.x, "y": tile2.y}),
+                                    (tile2, {"x": tile1.x, "y": tile1.y}),
+                                ],
+                                on_finish=arrive,
                             )
-                            tile1.i, tile1.j, tile2.i, tile2.j = (
-                                tile2.i,
-                                tile2.j,
-                                tile1.i,
-                                tile1.j,
+                        else:
+                            Timer.tween(
+                                0.25,
+                                [
+                                    (self.dragged_tile, {
+                                        "x": self.dragged_j * settings.TILE_SIZE, 
+                                        "y": self.dragged_i * settings.TILE_SIZE
+                                    })
+                                ]
                             )
-                            self._calculate_matches([tile1, tile2])
-
-                        # Swap tiles
+                    else:
                         Timer.tween(
                             0.25,
                             [
-                                (tile1, {"x": tile2.x, "y": tile2.y}),
-                                (tile2, {"x": tile1.x, "y": tile1.y}),
-                            ],
-                            on_finish=arrive,
+                                (self.dragged_tile, {
+                                    "x": self.dragged_j * settings.TILE_SIZE, 
+                                    "y": self.dragged_i * settings.TILE_SIZE
+                                })
+                            ]
                         )
 
-                    self.highlighted_tile = False
+                self.dragged_tile = None
+                self.highlighted_tile = False
 
-    def _calculate_matches(self, tiles: List) -> None:
+    def _calculate_matches(self, tiles: List) -> bool:
         matches = self.board.calculate_matches_for(tiles)
 
         if matches is None:
             self.active = True
-            return
+            return False
 
         settings.SOUNDS["match"].stop()
         settings.SOUNDS["match"].play()
@@ -205,6 +250,9 @@ class PlayState(BaseState):
 
         falling_tiles = self.board.get_falling_tiles()
 
+        if not self.board.has_matches():
+            self.board.shuffle_board()
+
         Timer.tween(
             0.25,
             falling_tiles,
@@ -212,3 +260,5 @@ class PlayState(BaseState):
                 [item[0] for item in falling_tiles]
             ),
         )
+
+        return True
