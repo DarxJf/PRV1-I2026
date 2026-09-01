@@ -16,9 +16,10 @@ from gale.input_handler import InputData
 from gale.state import BaseState
 from gale.text import render_text
 from gale.timer import Timer
+from gale.factory import Factory
 
 import settings
-
+from src.powerups.LineClear import LineClear
 
 class PlayState(BaseState):
     def enter(self, **enter_params: Dict[str, Any]) -> None:
@@ -56,6 +57,13 @@ class PlayState(BaseState):
         pygame.draw.rect(
             self.text_alpha_surface, (56, 56, 56, 234), pygame.Rect(0, 0, 212, 136)
         )
+
+        # self.line_clear_fac: Factory = Factory(LineClear)
+        """
+        Factory inyecta un "x" e "y" siempre en toda instancia, si mi clase
+        necesita una "i" y "j", Factory de todas formas dira que es una "x" e
+        "y"
+        """
 
         def decrement_timer():
             self.timer -= 1
@@ -155,7 +163,30 @@ class PlayState(BaseState):
                         self.highlighted_i2 = i
                         self.highlighted_j2 = j
 
-                        if di <= 1 and dj <= 1 and di != dj:
+                        if di == 0 and dj == 0:
+                            if self.dragged_tile is not None and getattr(self.dragged_tile, 'is_powerup', False):
+                                self.active = False
+                                act_tile = self.dragged_tile
+                            
+                                d_tiles = act_tile.activate(self.board)
+                            
+                                self.score += len(d_tiles) * 50
+                                self.board.matches.append(d_tiles)
+                                self.board.remove_matches()
+                            
+                                falling_tiles = self.board.get_falling_tiles()
+                            
+                                Timer.tween(
+                                    0.25,
+                                    falling_tiles,
+                                    on_finish=lambda: self._calculate_matches(
+                                        [item[0] for item in falling_tiles], -1, -1
+                                    ),
+                                )
+
+                                act_tile = None
+                                return
+                        elif di <= 1 and dj <= 1 and di != dj:
                             self.active = False
                             tile1 = self.dragged_tile
                             tile2 = self.board.tiles[i][j]
@@ -189,7 +220,7 @@ class PlayState(BaseState):
                                     tile2.i, tile2.j, tile1.i, tile1.j,
                                 )
 
-                                match = self._calculate_matches([tile1, tile2])
+                                match = self._calculate_matches([tile1, tile2], i, j)
                                 if not match:
                                     Timer.tween(
                                         0.25,
@@ -233,20 +264,46 @@ class PlayState(BaseState):
                 self.dragged_tile = None
                 self.highlighted_tile = False
 
-    def _calculate_matches(self, tiles: List) -> bool:
+    def _calculate_matches(self, tiles: List, last_i: int, last_j: int) -> bool:
         matches = self.board.calculate_matches_for(tiles)
 
         if matches is None:
+            if not self.board.has_matches():
+                self.board.shuffle_board()
             self.active = True
             return False
 
         settings.SOUNDS["match"].stop()
         settings.SOUNDS["match"].play()
 
+        power_up_act = False
+
         for match in matches:
+            extra_tiles = []
+            for tile in match:
+                if getattr(tile, 'is_powerup', False):
+                    extra_tiles.extend(tile.activate(self.board))
+
+            for tile in extra_tiles:
+                if tile not in match and tile is not None:
+                    match.append(tile)
+
             self.score += len(match) * 50
 
-        self.board.remove_matches()
+            if len(match) == 4 and last_j != -1 and last_i != -1:
+                color = match[0].color
+
+                self.board.remove_matches()
+
+                power_up = LineClear(last_i, last_j, color, 5)
+                self.board.tiles[last_i][last_j] = power_up
+
+                power_up_act = True
+
+                break
+
+        if not power_up_act:
+            self.board.remove_matches()
 
         falling_tiles = self.board.get_falling_tiles()
 
@@ -257,7 +314,7 @@ class PlayState(BaseState):
             0.25,
             falling_tiles,
             on_finish=lambda: self._calculate_matches(
-                [item[0] for item in falling_tiles]
+                [item[0] for item in falling_tiles], -1, -1
             ),
         )
 

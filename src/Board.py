@@ -14,6 +14,8 @@ import pygame
 
 import random
 
+from gale.timer import Timer
+
 import settings
 from src.Tile import Tile
 
@@ -25,9 +27,6 @@ class Board:
         self.matches: List[List[Tile]] = []
         self.tiles: List[List[Tile]] = []
         self._initialize_tiles()
-
-        if not self.has_matches():
-            self.shuffle_board()
 
     def render(self, surface: pygame.Surface) -> None:
         for row in self.tiles:
@@ -261,13 +260,16 @@ class Board:
         return False
 
     def shuffle_board(self) -> None:
+        for row in self.tiles:
+            if None is row:
+                return
+            
         while True:
             # Extraer los datos (color, variedad) de todas las baldosas actuales
             tile_data = []
             for i in range(settings.BOARD_HEIGHT):
                 for j in range(settings.BOARD_WIDTH):
-                    if self.tiles[i][j] is not None:
-                        tile_data.append((self.tiles[i][j].color, self.tiles[i][j].variety))
+                    tile_data.append(self.tiles[i][j])
 
             random.shuffle(tile_data)
 
@@ -277,17 +279,31 @@ class Board:
                 for j in range(settings.BOARD_WIDTH):
                     # siguiente color válido en la lista mezclada no genere un match accidental
                     valid_idx = idx
-                    while valid_idx < len(tile_data) and self._is_match_generated(i, j, tile_data[valid_idx][0]):
+                    while valid_idx < len(tile_data) and self._is_match_generated(i, j, tile_data[valid_idx].color):
                         valid_idx += 1
 
                     # intercambiar con la posición actual (idx)
                     if valid_idx < len(tile_data):
                         tile_data[idx], tile_data[valid_idx] = tile_data[valid_idx], tile_data[idx]
 
-                    # Instancia de la nueva baldosa con el color/variedad seguro
-                    color, variety = tile_data[idx]
-                    self.tiles[i][j] = Tile(i, j, color, variety)
+                    # Instancia del objeto en tile
+                    tile = tile_data[idx]
+                    tile.i = i
+                    tile.j = j
+                    tile.x = j * settings.TILE_SIZE
+                    tile.y = i * settings.TILE_SIZE
+
+                    self.tiles[i][j] = tile
                     idx += 1
 
             if self.has_matches():
                 break
+
+        tweens = []
+        for i in range(settings.BOARD_HEIGHT):
+            for j in range(settings.BOARD_WIDTH):
+                tile = self.tiles[i][j]
+                tweens.append((tile, {"x": j * settings.TILE_SIZE, "y": i * settings.TILE_SIZE}))
+        
+        # Asegúrate de tener importado Timer en Board.py
+        Timer.tween(0.5, tweens)
