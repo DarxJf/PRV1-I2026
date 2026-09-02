@@ -16,10 +16,10 @@ from gale.input_handler import InputData
 from gale.state import BaseState
 from gale.text import render_text
 from gale.timer import Timer
-from gale.factory import Factory
 
 import settings
 from src.powerups.LineClear import LineClear
+from src.powerups.NukeColor import NukeColor
 
 class PlayState(BaseState):
     def enter(self, **enter_params: Dict[str, Any]) -> None:
@@ -169,6 +169,9 @@ class PlayState(BaseState):
                                 act_tile = self.dragged_tile
                             
                                 d_tiles = act_tile.activate(self.board)
+
+                                settings.SOUNDS["nuke"].stop()
+                                settings.SOUNDS["nuke"].play()
                             
                                 self.score += len(d_tiles) * 50
                                 self.board.matches.append(d_tiles)
@@ -279,10 +282,15 @@ class PlayState(BaseState):
         power_up_act = False
 
         for match in matches:
+            old_len = len(match) # Evita que LineClear active Nuke
+
             extra_tiles = []
             for tile in match:
                 if getattr(tile, 'is_powerup', False):
                     extra_tiles.extend(tile.activate(self.board))
+
+                    settings.SOUNDS["nuke"].stop()
+                    settings.SOUNDS["nuke"].play()
 
             for tile in extra_tiles:
                 if tile not in match and tile is not None:
@@ -290,13 +298,38 @@ class PlayState(BaseState):
 
             self.score += len(match) * 50
 
-            if len(match) == 4 and last_j != -1 and last_i != -1:
+            spawn_i = last_i
+            spawn_j = last_j
+
+            for moved_tile in tiles:
+                if moved_tile in match:
+                    spawn_i = moved_tile.i
+                    spawn_j = moved_tile.j
+                    break
+
+            if spawn_j == -1 and spawn_i == -1:
+                spawn_i = match[0].i
+                spawn_j = match[0].j
+
+            if old_len >= 5:
+                color = match[0].color
+            
+                self.board.remove_matches()
+            
+                power_up = NukeColor(spawn_i, spawn_j, color, 5)
+                self.board.tiles[spawn_i][spawn_j] = power_up
+            
+                power_up_act = True
+            
+                break
+
+            if old_len == 4:
                 color = match[0].color
 
                 self.board.remove_matches()
 
-                power_up = LineClear(last_i, last_j, color, 5)
-                self.board.tiles[last_i][last_j] = power_up
+                power_up = LineClear(spawn_i, spawn_j, color, 5)
+                self.board.tiles[spawn_i][spawn_j] = power_up
 
                 power_up_act = True
 
