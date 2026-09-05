@@ -1,6 +1,6 @@
 """
 ISPPV1 2023
-Study Case: Match-3
+Study Case: Super Martian (Platformer)
 
 Author: Alejandro Mujica
 alejandro.j.mujic4@gmail.com
@@ -8,8 +8,8 @@ alejandro.j.mujic4@gmail.com
 This file contains the main program to run the game.
 """
 
-from src.Match3 import Match3
+from src.SuperMartian import SuperMartian
 
 if __name__ == "__main__":
-    match3 = Match3()
-    match3.exec()
+    super_martian = SuperMartian()
+    super_martian.exec()

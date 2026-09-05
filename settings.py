@@ -1,6 +1,6 @@
 """
 ISPPV1 2023
-Study Case: Match-3
+Study Case: Super Martian (Platformer)
 
 Author: Alejandro Mujica
 alejandro.j.mujic4@gmail.com
@@ -10,68 +10,89 @@ inputs with an their ids, constants of values to set up the game, sounds,
 textures, frames, and fonts.
 """
 
-from pathlib import Path
+import pathlib
 
 import pygame
 
+from gale import frames
 from gale import input_handler
 
-from src.frames_utility import generate_tile_frames
-
 input_handler.InputHandler.set_keyboard_action(input_handler.KEY_ESCAPE, "quit")
-input_handler.InputHandler.set_keyboard_action(input_handler.KEY_KP_ENTER, "enter")
+input_handler.InputHandler.set_keyboard_action(input_handler.KEY_p, "pause")
 input_handler.InputHandler.set_keyboard_action(input_handler.KEY_RETURN, "enter")
-input_handler.InputHandler.set_keyboard_action(input_handler.KEY_UP, "up")
-input_handler.InputHandler.set_keyboard_action(input_handler.KEY_DOWN, "down")
-input_handler.InputHandler.set_mouse_click_action(input_handler.MOUSE_BUTTON_1, "click")
+input_handler.InputHandler.set_keyboard_action(input_handler.KEY_KP_ENTER, "enter")
+input_handler.InputHandler.set_keyboard_action(input_handler.KEY_RIGHT, "move_right")
+input_handler.InputHandler.set_keyboard_action(input_handler.KEY_w, "move_right")
+input_handler.InputHandler.set_keyboard_action(input_handler.KEY_LEFT, "move_left")
+input_handler.InputHandler.set_keyboard_action(input_handler.KEY_q, "move_left")
+input_handler.InputHandler.set_keyboard_action(input_handler.KEY_SPACE, "jump")
+input_handler.InputHandler.set_mouse_click_action(input_handler.MOUSE_BUTTON_1, "jump")
 
-TITLE = "Match 3"
+TITLE = "Super Martian"
 
-WINDOW_WIDTH = 1280
-WINDOW_HEIGHT = 720
+# Size we want to emulate
+VIRTUAL_WIDTH = 400
+VIRTUAL_HEIGHT = 192
 
-VIRTUAL_WIDTH = 512
-VIRTUAL_HEIGHT = 288
+# Size of our actual window
+WINDOW_WIDTH = VIRTUAL_WIDTH * 4
+WINDOW_HEIGHT = VIRTUAL_HEIGHT * 4
 
-BOARD_WIDTH = 8
-BOARD_HEIGHT = 8
+PLAYER_SPEED = 80
 
-TILE_SIZE = 32
+GRAVITY = 980
 
-NUM_VARIETIES = 6
-NUM_COLORS = 6
+# Variable-height jump: the takeoff speed is always the same (full arc if
+# held), but releasing "jump" early while still ascending clamps vy up to
+# JUMP_CUT_VELOCITY (a smaller upward speed), so the arc peaks sooner and
+# lower. The longer the button stays held, the closer the jump gets to
+# its full height.
+JUMP_TAKEOFF_SPEED = GRAVITY / 3
+JUMP_CUT_VELOCITY = GRAVITY / 8
 
-BACKGROUND_SCROLL_SPEED = 40
-BACKGROUND_LOOPING_POINT = -1024 + VIRTUAL_WIDTH - 4 + 51
+CAMERA_FOLLOW_RATE = 8.0
 
-LEVEL_TIME = 60
+# Random delay range (seconds) between one flying creature leaving the
+# level and the next one spawning.
+FLYING_CREATURE_MIN_SPAWN_DELAY = 4
+FLYING_CREATURE_MAX_SPAWN_DELAY = 9
 
-BASE_DIR = Path(__file__).parent
+NUM_LEVELS = 2
+
+BASE_DIR = pathlib.Path(__file__).parent
+
+TILEMAPS = {
+    i: str(BASE_DIR / "assets" / "tilemaps" / f"level{i}.json")
+    for i in range(1, NUM_LEVELS + 1)
+}
 
 TEXTURES = {
-    "background": pygame.image.load(
-        BASE_DIR / "assets" / "graphics" / "background.png"
-    ),
-    "tiles": pygame.image.load(BASE_DIR / "assets" / "graphics" / "match3.png"),
+    "tiles": pygame.image.load(BASE_DIR / "assets" / "graphics" / "tileset.png"),
+    "martian": pygame.image.load(BASE_DIR / "assets" / "graphics" / "martian.png"),
+    "creatures": pygame.image.load(BASE_DIR / "assets" / "graphics" / "creatures.png"),
+    "block": pygame.image.load(BASE_DIR / "assets" / "graphics" / "box.png"),
+    "e_block": pygame.image.load(BASE_DIR / "assets" / "graphics" / "boxnt.png"),
+    "key": pygame.image.load(BASE_DIR / "assets" / "graphics" / "key.png"),
 }
 
-FRAMES = {"tiles": generate_tile_frames(TEXTURES["tiles"])}
+FRAMES = {
+    "tiles": frames.generate_frames(TEXTURES["tiles"], 16, 16),
+    "martian": frames.generate_frames(TEXTURES["martian"], 16, 20),
+    "creatures": frames.generate_frames(TEXTURES["creatures"], 16, 16),
+}
 
 SOUNDS = {
-    "clock": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "clock.wav"),
-    "error": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "error.wav"),
-    "game-over": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "game-over.wav"),
-    "match": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "match.wav"),
-    "next-level": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "next-level.wav"),
-    "select": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "select.wav"),
-    "nuke": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "nuke.mp3"),
+    "pickup_coin": pygame.mixer.Sound(
+        BASE_DIR / "assets" / "sounds" / "pickup_coin.wav"
+    ),
+    "jump": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "jump.wav"),
+    "timer": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "timer.wav"),
+    "count": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "count.wav"),
 }
 
-pygame.mixer.music.load(BASE_DIR / "assets" / "sounds" / "music.mp3")
+SOUNDS["pickup_coin"].set_volume(0.5)
 
 FONTS = {
-    "small": pygame.font.Font(BASE_DIR / "assets" / "fonts" / "font.ttf", 12),
-    "medium": pygame.font.Font(BASE_DIR / "assets" / "fonts" / "font.ttf", 24),
-    "large": pygame.font.Font(BASE_DIR / "assets" / "fonts" / "font.ttf", 48),
-    "huge": pygame.font.Font(BASE_DIR / "assets" / "fonts" / "font.ttf", 64),
+    "small": pygame.font.Font(BASE_DIR / "assets" / "fonts" / "font.ttf", 8),
+    "medium": pygame.font.Font(BASE_DIR / "assets" / "fonts" / "font.ttf", 16),
 }
