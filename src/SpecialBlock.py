@@ -23,7 +23,7 @@ class SpecialBlock:
         self.is_empty = True
         self.image = settings.TEXTURES["e_block"]
         
-        # settings.SOUNDS["spawn_key"].play()
+        settings.SOUNDS["key"].play()
 
         key = Key(self.x, self.y - 1)
         level.items.append(key)
@@ -76,7 +76,7 @@ class Key:
         self.y = y
         self.width = 16
         self.height = 16
-        self.image = settings.TEXTURES["key"]
+        self.image = settings.TEXTURES["key"].convert_alpha()
         
         self.active = True
         self.collidable = False
@@ -87,7 +87,8 @@ class Key:
 
     def on_collide(self, player) -> None:
         self.active = False
-        # settings.SOUNDS["victory"].play()
+        pygame.mixer.music.stop()
+        settings.SOUNDS["victory"].play()
 
     def on_consume(self, player):
         pass

@@ -88,9 +88,12 @@ SOUNDS = {
     "jump": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "jump.wav"),
     "timer": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "timer.wav"),
     "count": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "count.wav"),
+    "key": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "key.mp3"),
+    "victory": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "SM_V.mp3"),
 }
 
 SOUNDS["pickup_coin"].set_volume(0.5)
+SOUNDS["key"].set_volume(0.5)
 
 FONTS = {
     "small": pygame.font.Font(BASE_DIR / "assets" / "fonts" / "font.ttf", 8),

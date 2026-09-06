@@ -106,6 +106,7 @@ class VictoryState(BaseState):
 
     def on_input(self, input_id: str, input_data: InputData) -> None:
         if input_id == "enter" and input_data.pressed:
+            settings.SOUNDS["victory"].stop()
             next_level = self.current_level.level + 1
             if next_level <= settings.NUM_LEVELS:
                 self.state_machine.change("play", level=next_level)
