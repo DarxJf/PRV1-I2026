@@ -66,12 +66,17 @@ class PlayState(BaseState):
         block_y = self.player.y - 20
 
         self.special_block = SpecialBlock(x=block_x, y=block_y)
+
+        self.g_score = 250 if self.game_level.level == 1 else 350
+        self.special_block.active = False
+        self.special_block.collidable = False
+
         self.game_level.items.append(self.special_block) 
 
         self.clock = enter_params.get("clock")
 
         if self.clock is None:
-            self.clock = Clock(30)
+            self.clock = Clock(30) if self.game_level.level == 1 else Clock(36)
 
             def countdown_timer():
                 self.clock.count_down()
@@ -86,6 +91,18 @@ class PlayState(BaseState):
         else:
             Timer.resume()
 
+        # Dibujado en circulo
+        self.iris_radius = 0
+        
+        # 2. Calculamos un radio máximo gigante para asegurar que destape toda la pantalla
+        self.max_iris_radius = max(settings.VIRTUAL_WIDTH, settings.VIRTUAL_HEIGHT) + 100
+
+        Timer.tween(
+            0.4,
+            [(self, {"iris_radius": self.max_iris_radius})],
+            ease_function_name="out_circ" 
+        )
+
     def update(self, dt: float) -> None:
         if self.player.is_dead:
             pygame.mixer.music.stop()
@@ -94,6 +111,11 @@ class PlayState(BaseState):
             self.state_machine.change("game_over", self.player)
 
         self.player.update(dt)
+
+        if hasattr(self, 'special_block') and not self.special_block.active:
+            if self.player.score >= self.g_score:
+                self.special_block.active = True
+                self.special_block.collidable = True
 
         if self.player.y >= self.tilemap.pixel_height:
             self.player.change_state("dead")
@@ -109,24 +131,27 @@ class PlayState(BaseState):
             if not item.active or not item.collidable:
                 continue
 
-            if isinstance(item, SpecialBlock):
-                player_rect = self.player.get_collision_rect()
-                block_rect = item.get_collision_rect()
-                print(f"Jugador: {player_rect} | Bloque: {block_rect}")
-
             if self.player.collides(item):
-                # 2. TEST DE IMPACTO: Si se tocan, esto DEBE imprimirse
-                print("¡IMPACTO CONFIRMADO EN EL MOTOR!") 
-                
                 item.on_collide(self.player)
                 item.on_consume(self.player)
 
-            # if self.player.collides(item):
-            #     item.on_collide(self.player)
-            #     item.on_consume(self.player)
-
                 if isinstance(item, Key):
-                    self.state_machine.change("victory", current_level=self.game_level, player=self.player)
+                    self.level_complete = True
+                    Timer.clear() # Detiene el temporizador de la partida
+                    
+                    # Retroalimentación sonora del nivel completado
+                    # settings.SOUNDS["victory"].play() 
+ 
+                    Timer.tween(
+                        0.5,
+                        [(self, {"iris_radius": 0})],
+                        ease_function_name="in_cubic", 
+                        on_finish=lambda: self.state_machine.change(
+                            "victory", 
+                            current_level=self.game_level, 
+                            player=self.player
+                        )
+                    )
 
     def render(self, surface: pygame.Surface) -> None:
         self.game_level.render(surface, self.camera)
@@ -152,22 +177,23 @@ class PlayState(BaseState):
             shadowed=True,
         )
 
-        player_rect = self.player.get_collision_rect()
-        pygame.draw.rect(
-            surface, 
-            (255, 0, 0), 
-            (player_rect.x - self.camera.x if self.camera else player_rect.x, player_rect.y, player_rect.width, player_rect.height), 
-            1
-        )
-
-        # 2. Dibuja la Hitbox física del BLOQUE (Verde)
-        if hasattr(self, 'special_block') and self.special_block.active:
-            block_rect = self.special_block.get_collision_rect()
-            pygame.draw.rect(
-                surface, 
-                (0, 255, 0), 
-                (block_rect.x - self.camera.x, block_rect.y - self.camera.y, block_rect.width, block_rect.height), 
-                1
+        if hasattr(self, 'iris_radius') and self.iris_radius < getattr(self, 'max_iris_radius', 2000):
+            # 1. Rectángulo físico del jugador
+            player_rect = pygame.Rect(self.player.x, self.player.y, self.player.width, self.player.height)
+            
+            # 2. Proyección exacta en pantalla (¡La clave que descubriste antes!)
+            screen_rect = self.camera.apply(player_rect)
+            
+            # 3. Extraemos el centro exacto de esa proyección
+            center_x = screen_rect.centerx
+            center_y = screen_rect.centery
+            
+            pygame.draw.circle(
+                surface,
+                (0, 0, 0),
+                (center_x, center_y),
+                int(self.iris_radius) + 1500, # Radio + el grosor
+                1500 # Grosor masivo para tapar todo el exterior
             )
 
     def on_input(self, input_id: str, input_data: InputData) -> None:
