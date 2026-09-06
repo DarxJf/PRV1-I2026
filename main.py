@@ -1,6 +1,6 @@
 """
 ISPPV1 2023
-Study Case: Super Martian (Platformer)
+Study Case: The Legend of the Princess (ARPG)
 
 Author: Alejandro Mujica
 alejandro.j.mujic4@gmail.com
@@ -8,8 +8,8 @@ alejandro.j.mujic4@gmail.com
 This file contains the main program to run the game.
 """
 
-from src.SuperMartian import SuperMartian
+from src.TheLegendOfThePrincess import TheLegendOfThePrincess
 
 if __name__ == "__main__":
-    super_martian = SuperMartian()
-    super_martian.exec()
+    game = TheLegendOfThePrincess()
+    game.exec()

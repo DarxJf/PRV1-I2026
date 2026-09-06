@@ -1,6 +1,6 @@
 """
 ISPPV1 2023
-Study Case: Super Martian (Platformer)
+Study Case: The Legend of the Princess (ARPG)
 
 Author: Alejandro Mujica
 alejandro.j.mujic4@gmail.com
@@ -8,54 +8,61 @@ alejandro.j.mujic4@gmail.com
 This file contains the class Player.
 """
 
-from typing import TypeVar
+from typing import Any
 
 from gale.command import CommandBindings
 from gale.input_handler import InputData
 
-from src.GameEntity import GameEntity
 from src.commands import (
-    JUMP,
+    INTERACT,
+    MOVE_DOWN,
     MOVE_LEFT,
     MOVE_RIGHT,
-    STOP_JUMP,
+    MOVE_UP,
+    STOP_MOVE_DOWN,
     STOP_MOVE_LEFT,
     STOP_MOVE_RIGHT,
+    STOP_MOVE_UP,
+    SWORD,
 )
-from src.states.entities import player_states
+from src.Entity import Entity
 
 
-class Player(GameEntity):
-    def __init__(self, x: int, y: int, game_level: TypeVar("GameLevel")) -> None:
-        super().__init__(
-            x,
-            y,
-            16,
-            20,
-            "martian",
-            game_level,
-            states={
-                "idle": lambda sm: player_states.IdleState(self, sm),
-                "walk": lambda sm: player_states.WalkState(self, sm),
-                "jump": lambda sm: player_states.JumpState(self, sm),
-                "fall": lambda sm: player_states.FallState(self, sm),
-                "dead": lambda sm: player_states.DeadState(self, sm),
-            },
-            animation_defs={
-                "idle": {"frames": [0]},
-                "walk": {"frames": [9, 10], "interval": 0.15},
-                "jump": {"frames": [2]},
-            },
-        )
-        self.score = 0
-        self.coins_counter = {54: 0, 55: 0, 61: 0, 62: 0}
+class Player(Entity):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+
+        # Edge-triggered intent: sword/take are one-shot actions resolved
+        # (and cleared) by whichever player state's update() consumes them,
+        # the same way jump_requested works in 05-super_martian.
+        self.sword_requested = False
+        self.interact_requested = False
 
         self.command_bindings = CommandBindings()
         self.command_bindings.bind("move_left", press=MOVE_LEFT, release=STOP_MOVE_LEFT)
         self.command_bindings.bind(
             "move_right", press=MOVE_RIGHT, release=STOP_MOVE_RIGHT
         )
-        self.command_bindings.bind("jump", press=JUMP, release=STOP_JUMP)
+        self.command_bindings.bind("move_up", press=MOVE_UP, release=STOP_MOVE_UP)
+        self.command_bindings.bind("move_down", press=MOVE_DOWN, release=STOP_MOVE_DOWN)
+        self.command_bindings.bind("sword", press=SWORD)
+        self.command_bindings.bind("enter", press=INTERACT)
+
+    def collides(self, target: Any) -> bool:
+        """
+        AABB with some slight shrinkage of the box on the top side, for
+        perspective (so walking "into" the top edge of an obstacle from
+        below doesn't collide until the player's feet actually reach it).
+        """
+        self_y = self.y + self.height / 2
+        self_height = self.height - self.height / 2
+
+        return not (
+            self.x + self.width < target.x
+            or self.x > target.x + target.width
+            or self_y + self_height < target.y
+            or self_y > target.y + target.height
+        )
 
     def on_input(self, input_id: str, input_data: InputData) -> None:
         self.command_bindings.dispatch(self, input_id, input_data)

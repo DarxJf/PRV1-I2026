@@ -1,6 +1,6 @@
 """
 ISPPV1 2023
-Study Case: Super Martian (Platformer)
+Study Case: The Legend of the Princess (ARPG)
 
 Author: Alejandro Mujica
 alejandro.j.mujic4@gmail.com
@@ -16,86 +16,133 @@ import pygame
 
 from gale import frames
 from gale import input_handler
+from gale import tilemap
 
 input_handler.InputHandler.set_keyboard_action(input_handler.KEY_ESCAPE, "quit")
-input_handler.InputHandler.set_keyboard_action(input_handler.KEY_p, "pause")
+input_handler.InputHandler.set_keyboard_action(input_handler.KEY_LEFT, "move_left")
+input_handler.InputHandler.set_keyboard_action(input_handler.KEY_RIGHT, "move_right")
+input_handler.InputHandler.set_keyboard_action(input_handler.KEY_UP, "move_up")
+input_handler.InputHandler.set_keyboard_action(input_handler.KEY_DOWN, "move_down")
+input_handler.InputHandler.set_keyboard_action(input_handler.KEY_SPACE, "sword")
 input_handler.InputHandler.set_keyboard_action(input_handler.KEY_RETURN, "enter")
 input_handler.InputHandler.set_keyboard_action(input_handler.KEY_KP_ENTER, "enter")
-input_handler.InputHandler.set_keyboard_action(input_handler.KEY_RIGHT, "move_right")
-input_handler.InputHandler.set_keyboard_action(input_handler.KEY_w, "move_right")
-input_handler.InputHandler.set_keyboard_action(input_handler.KEY_LEFT, "move_left")
-input_handler.InputHandler.set_keyboard_action(input_handler.KEY_q, "move_left")
-input_handler.InputHandler.set_keyboard_action(input_handler.KEY_SPACE, "jump")
-input_handler.InputHandler.set_mouse_click_action(input_handler.MOUSE_BUTTON_1, "jump")
 
-TITLE = "Super Martian"
-
-# Size we want to emulate
-VIRTUAL_WIDTH = 400
-VIRTUAL_HEIGHT = 192
-
-# Size of our actual window
-WINDOW_WIDTH = VIRTUAL_WIDTH * 4
-WINDOW_HEIGHT = VIRTUAL_HEIGHT * 4
-
-PLAYER_SPEED = 80
-
-GRAVITY = 980
-
-# Variable-height jump: the takeoff speed is always the same (full arc if
-# held), but releasing "jump" early while still ascending clamps vy up to
-# JUMP_CUT_VELOCITY (a smaller upward speed), so the arc peaks sooner and
-# lower. The longer the button stays held, the closer the jump gets to
-# its full height.
-JUMP_TAKEOFF_SPEED = GRAVITY / 3
-JUMP_CUT_VELOCITY = GRAVITY / 8
-
-CAMERA_FOLLOW_RATE = 8.0
-
-# Random delay range (seconds) between one flying creature leaving the
-# level and the next one spawning.
-FLYING_CREATURE_MIN_SPAWN_DELAY = 4
-FLYING_CREATURE_MAX_SPAWN_DELAY = 9
-
-NUM_LEVELS = 2
+TITLE = "The Legend of the Princess"
 
 BASE_DIR = pathlib.Path(__file__).parent
 
-TILEMAPS = {
-    i: str(BASE_DIR / "assets" / "tilemaps" / f"level{i}.json")
-    for i in range(1, NUM_LEVELS + 1)
-}
+VIRTUAL_WIDTH = 384
+VIRTUAL_HEIGHT = 216
+
+WINDOW_WIDTH = 1280
+WINDOW_HEIGHT = 720
+
+TILE_SIZE = 16
+
+#
+# map constants
+#
+MAP_WIDTH = VIRTUAL_WIDTH // TILE_SIZE - 2
+MAP_HEIGHT = VIRTUAL_HEIGHT // TILE_SIZE - 2
+
+MAP_RENDER_OFFSET_X = (VIRTUAL_WIDTH - MAP_WIDTH * TILE_SIZE) // 2
+MAP_RENDER_OFFSET_Y = (VIRTUAL_HEIGHT - MAP_HEIGHT * TILE_SIZE) // 2
+
+#
+# tile IDs (1-based, matching the tilesheet's row-major slicing)
+#
+TILE_TOP_LEFT_CORNER = 4
+TILE_TOP_RIGHT_CORNER = 5
+TILE_BOTTOM_LEFT_CORNER = 23
+TILE_BOTTOM_RIGHT_CORNER = 24
+
+TILE_EMPTY = 19
+
+TILE_FLOORS = [
+    7, 8, 9, 10, 11, 12, 13,
+    26, 27, 28, 29, 30, 31, 32,
+    45, 46, 47, 48, 49, 50, 51,
+    64, 65, 66, 67, 68, 69, 70,
+    88, 89, 107, 108,
+]
+
+TILE_TOP_WALLS = [58, 59, 60]
+TILE_BOTTOM_WALLS = [79, 80, 81]
+TILE_LEFT_WALLS = [77, 96, 115]
+TILE_RIGHT_WALLS = [78, 97, 116]
 
 TEXTURES = {
-    "tiles": pygame.image.load(BASE_DIR / "assets" / "graphics" / "tileset.png"),
-    "martian": pygame.image.load(BASE_DIR / "assets" / "graphics" / "martian.png"),
-    "creatures": pygame.image.load(BASE_DIR / "assets" / "graphics" / "creatures.png"),
-    "block": pygame.image.load(BASE_DIR / "assets" / "graphics" / "box.png"),
-    "e_block": pygame.image.load(BASE_DIR / "assets" / "graphics" / "boxnt.png"),
-    "key": pygame.image.load(BASE_DIR / "assets" / "graphics" / "key.png"),
+    "tiles": pygame.image.load(BASE_DIR / "assets" / "graphics" / "tilesheet.png"),
+    "background": pygame.image.load(BASE_DIR / "assets" / "graphics" / "background.png"),
+    "character-walk": pygame.image.load(
+        BASE_DIR / "assets" / "graphics" / "character_walk.png"
+    ),
+    "character-swing-sword": pygame.image.load(
+        BASE_DIR / "assets" / "graphics" / "character_swing_sword.png"
+    ),
+    "hearts": pygame.image.load(BASE_DIR / "assets" / "graphics" / "hearts.png"),
+    "switches": pygame.image.load(BASE_DIR / "assets" / "graphics" / "switches.png"),
+    "entities": pygame.image.load(BASE_DIR / "assets" / "graphics" / "entities.png"),
+    "character-pot-lift": pygame.image.load(
+        BASE_DIR / "assets" / "graphics" / "character_pot_lift.png"
+    ),
+    "character-pot-walk": pygame.image.load(
+        BASE_DIR / "assets" / "graphics" / "character_pot_walk.png"
+    ),
 }
+
+# Used by Room's gale.tilemap.TileMap: TILE_* ids above are 1-based,
+# matching this tileset's default first_gid, so they double as gids.
+TILESET = tilemap.Tileset(TEXTURES["tiles"], TILE_SIZE, TILE_SIZE)
 
 FRAMES = {
     "tiles": frames.generate_frames(TEXTURES["tiles"], 16, 16),
-    "martian": frames.generate_frames(TEXTURES["martian"], 16, 20),
-    "creatures": frames.generate_frames(TEXTURES["creatures"], 16, 16),
+    "character-walk": frames.generate_frames(TEXTURES["character-walk"], 16, 32),
+    "character-swing-sword": frames.generate_frames(
+        TEXTURES["character-swing-sword"], 32, 32
+    ),
+    "hearts": frames.generate_frames(TEXTURES["hearts"], 16, 16),
+    "switches": frames.generate_frames(TEXTURES["switches"], 16, 18),
+    "entities": frames.generate_frames(TEXTURES["entities"], 16, 16),
+    "character-pot-lift": frames.generate_frames(TEXTURES["character-pot-lift"], 16, 32),
+    "character-pot-walk": frames.generate_frames(TEXTURES["character-pot-walk"], 16, 32),
+}
+
+
+def frame(texture_id, one_based_index):
+    """
+    Every frame index in this project's own code (tile IDs, quad numbers,
+    animation frame lists) is written 1-based, matching the original
+    Lua/LOVE2D source it was ported from, since gale.frames.generate_frames
+    (like Lua tables) still needs a 0-based lookup.
+    """
+    return FRAMES[texture_id][one_based_index - 1]
+
+
+FONTS = {
+    "princess": pygame.font.Font(BASE_DIR / "assets" / "fonts" / "princess.otf", 32),
+    "princess-small": pygame.font.Font(
+        BASE_DIR / "assets" / "fonts" / "princess.otf", 24
+    ),
 }
 
 SOUNDS = {
-    "pickup_coin": pygame.mixer.Sound(
-        BASE_DIR / "assets" / "sounds" / "pickup_coin.wav"
+    "sword": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "sword.wav"),
+    "hit-enemy": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "hit_enemy.wav"),
+    "hit-player": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "hit_player.wav"),
+    "door": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "door.wav"),
+    "heart-taken": pygame.mixer.Sound(
+        BASE_DIR / "assets" / "sounds" / "heart_taken.wav"
     ),
-    "jump": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "jump.wav"),
-    "timer": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "timer.wav"),
-    "count": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "count.wav"),
-    "key": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "key.mp3"),
-    "victory": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "SM_V.mp3"),
+    "pot-wall": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "pot_wall.wav"),
 }
 
-SOUNDS["pickup_coin"].set_volume(0.5)
-SOUNDS["key"].set_volume(0.5)
-
-FONTS = {
-    "small": pygame.font.Font(BASE_DIR / "assets" / "fonts" / "font.ttf", 8),
-    "medium": pygame.font.Font(BASE_DIR / "assets" / "fonts" / "font.ttf", 16),
+MUSIC = {
+    "start": str(BASE_DIR / "assets" / "sounds" / "start_music.mp3"),
+    "dungeon": str(BASE_DIR / "assets" / "sounds" / "dungeon_music.mp3"),
+    "game-over": str(BASE_DIR / "assets" / "sounds" / "game_over_music.mp3"),
 }
+
+COLOR_TITLE_SHADOW = (34, 34, 34)
+COLOR_TITLE = (175, 53, 42)
+COLOR_WHITE = (255, 255, 255)
