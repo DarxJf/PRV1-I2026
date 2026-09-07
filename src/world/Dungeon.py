@@ -10,6 +10,7 @@ This file contains the class Dungeon.
 
 import math
 from typing import Callable, TypeVar
+import random
 
 import pygame
 
@@ -17,19 +18,21 @@ from gale.timer import Timer
 
 import settings
 from src.world.Room import Room
-
+from src.world.BossRoom import BossRoom
 
 class Dungeon:
     def __init__(
         self,
         player: TypeVar("Player"),
         on_game_over: Callable[[], None],
+        on_victory: Callable[[], None],
     ) -> None:
         self.player = player
         self.on_game_over = on_game_over
+        self.on_victory = on_victory
 
         # Current room we're operating in.
-        self.current_room = Room(self.player, self.on_game_over)
+        self.current_room = Room(self.player, self.on_game_over, self.on_victory)
 
         # Room we're moving the camera to during a shift; becomes the
         # active room afterwards.
@@ -47,7 +50,21 @@ class Dungeon:
         PlayerWalkState/PlayerPotWalkState.
         """
         self.shifting = True
-        self.next_room = Room(self.player, self.on_game_over)
+
+        entrance_direction = "left"
+        if shift_x > 0:
+            entrance_direction = "left"
+        elif shift_x < 0:
+            entrance_direction = "right"
+        elif shift_y > 0:
+            entrance_direction = "top"
+        elif shift_y < 0:
+            entrance_direction = "bottom"
+
+        if getattr(self.player, 'hasBow', False) and random.randint(1, 3) == 1:
+            self.next_room = BossRoom(self.player, self.on_game_over, self.on_victory, entrance_direction)
+        else:
+            self.next_room = Room(self.player, self.on_game_over, self.on_victory)
 
         # Start all doors in next room as open until we get in.
         for doorway in self.next_room.doorways:

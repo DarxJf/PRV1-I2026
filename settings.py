@@ -90,6 +90,7 @@ TEXTURES = {
         BASE_DIR / "assets" / "graphics" / "character_pot_walk.png"
     ),
     "arrows": pygame.image.load(BASE_DIR / "assets" / "graphics" / "arrows.png"),
+    "fireball": pygame.image.load(BASE_DIR / "assets" / "graphics" / "fireball.png"),
 }
 
 # Used by Room's gale.tilemap.TileMap: TILE_* ids above are 1-based,
@@ -108,6 +109,7 @@ FRAMES = {
     "character-pot-lift": frames.generate_frames(TEXTURES["character-pot-lift"], 16, 32),
     "character-pot-walk": frames.generate_frames(TEXTURES["character-pot-walk"], 16, 32),
     "arrows": frames.generate_frames(TEXTURES["arrows"], 16, 16),
+    "fireball": frames.generate_frames(TEXTURES["fireball"], 16, 16),
 }
 
 

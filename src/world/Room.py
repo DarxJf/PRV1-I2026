@@ -74,7 +74,8 @@ def _doorway_opening_for(
     """
     for direction, zone in _DOORWAY_ZONES.items():
         if zone.colliderect(rect):
-            return doorways_by_direction[direction].get_collision_rect()
+            if direction in doorways_by_direction:
+                return doorways_by_direction[direction].get_collision_rect()
 
     return None
 
@@ -84,10 +85,12 @@ class Room:
         self,
         player: TypeVar("Player"),
         on_game_over: Callable[[], None],
+        on_victory: Callable[[], None],
     ) -> None:
         # Reference to player for collisions, etc.
         self.player = player
         self.on_game_over = on_game_over
+        self.on_victory = on_victory
 
         self.width = settings.MAP_WIDTH
         self.height = settings.MAP_HEIGHT
@@ -364,7 +367,7 @@ class Room:
 
         if not getattr(self.player, 'hasBow', False):
             # Le damos una probabilidad (ej. 1 de cada 3 habitaciones) de aparecer
-            if random.randint(1, 1) == 1:
+            if random.randint(1, 3) == 1:
                 chest = GameObject(
                     GAME_OBJECT_DEFS["chest"],
                     random.randint(

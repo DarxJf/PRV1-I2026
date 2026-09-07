@@ -34,6 +34,26 @@ class Projectile:
 
         d = _SPEED * dt
 
+        if self.direction == "custom":
+            if hasattr(self, 'vx') and hasattr(self, 'vy'):
+                self.obj.x += self.vx * dt
+                self.obj.y += self.vy * dt
+                
+                # Destruir si sale de los límites de la sala
+                limit_left = settings.MAP_RENDER_OFFSET_X + settings.TILE_SIZE
+                limit_right = settings.VIRTUAL_WIDTH - settings.TILE_SIZE * 2
+                limit_top = settings.MAP_RENDER_OFFSET_Y + settings.TILE_SIZE
+                bottom_edge = (
+                    settings.MAP_HEIGHT * settings.TILE_SIZE
+                    + settings.MAP_RENDER_OFFSET_Y
+                    - settings.TILE_SIZE
+                )
+    
+                if (self.obj.x <= limit_left or self.obj.x + self.obj.width >= limit_right or
+                    self.obj.y <= limit_top or self.obj.y + self.obj.height >= bottom_edge):
+                    self.dead = True
+                return
+
         if self.direction == "up":
             self.obj.y -= d
             limit = settings.MAP_RENDER_OFFSET_Y + settings.TILE_SIZE - self.obj.height / 2

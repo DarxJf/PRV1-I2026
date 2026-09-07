@@ -83,13 +83,27 @@ GAME_OBJECT_DEFS: Dict[str, Dict[str, Any]] = {
         "interactable": True,
         "states": {
             "closed": {"frame": 167},
-            "open": {"frame": 168},
+            "open": {"frame": 128},
         },
         "on_interact": _open_chest,
     },
     "arrows": {
-        "type": "arrow",
+        "type": "projectile",
         "texture": "arrows",
+        "width": 16,
+        "height": 16,
+        "solid": False,
+        "default_state": "right",
+        "states": {
+            "right": {"frame": 1},
+            "up": {"frame": 2},
+            "left": {"frame": 3},
+            "down": {"frame": 4},
+        }
+    },
+    "fireball": {
+        "type": "projectile",
+        "texture": "fireball",
         "width": 16,
         "height": 16,
         "solid": False,
