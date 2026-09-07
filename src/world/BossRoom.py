@@ -36,14 +36,36 @@ class BossRoom(Room):
         pass
 
     def update(self, dt: float) -> None:
-        flechas_vivas = [p for p in self.projectiles if p.__class__.__name__ == "Arrow"]
+        t_arrows = [p for p in self.projectiles if p.__class__.__name__ == "Arrow"]
+        other_projectiles = [p for p in self.projectiles if p.__class__.__name__ != "Arrow"]
 
+        # 2. Ocultamos las flechas del motor base para que NO hagan daño automático
+        self.projectiles = other_projectiles
+
+        # 3. FÍSICAS DEL MOTOR (Aquí el ataque de tu ESPADA aplica daño limpiamente)
         super().update(dt) 
 
-        for flecha in flechas_vivas:
-            if flecha.dead and not self.boss.dead and flecha.collides(self.boss):
-                self.boss.take_arrow_hit()
-                print("¡Impacto atrapado en el acto!")
+        # 4. Actualizamos las flechas manualmente y comprobamos aturdimiento
+        for arrow in t_arrows:
+            arrow.update(dt) # Se mueve y revisa colisión con las paredes
+            if not arrow.dead and hasattr(self, 'boss') and not self.boss.dead:
+                if arrow.collides(self.boss):
+                    self.boss.take_arrow_hit()
+                    print("¡Aturdido con flecha! (Cero daño)")
+                    arrow.dead = True
+        
+        # Devolvemos las flechas vivas a la lista para que sigan dibujándose
+        self.projectiles.extend([a for a in t_arrows if not a.dead])
+
+        if hasattr(self, 'boss'):
+            if self.boss.health <= 0 and not getattr(self, 'victory_triggered', False):
+                self.boss.dead = True
+                self.victory_triggered = True
+                
+                from gale.timer import Timer
+                Timer.clear()
+                self.on_victory()
+                return
 
         if hasattr(self, 'boss') and not self.boss.dead:
             self.boss.update(dt, self.player, self)
@@ -52,11 +74,6 @@ class BossRoom(Room):
                 self.player.damage(2)
                 self.player.go_invulnerable(1.5)
 
-        if self.boss.health <= 0 and not self.boss.dead:
-            self.boss.dead = True
-            Timer.clear()
-            self.on_victory()
-
         for projectile in list(self.projectiles):
             if projectile.__class__.__name__ != "Arrow" and not projectile.dead:
                 if projectile.collides(self.player) and not self.player.invulnerable:
@@ -64,7 +81,6 @@ class BossRoom(Room):
                     projectile.dead = True
                     self.player.dead = True
                     self.on_game_over()
-
 
 
     def _spawn_boss(self, entrance_direction: str) -> None:
@@ -92,7 +108,7 @@ class BossRoom(Room):
             width=16,
             height=16,
             walk_speed=0,
-            health=2,  
+            health=4,  
             animation_defs=definition["animations"],
             states={} 
         )
