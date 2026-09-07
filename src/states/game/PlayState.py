@@ -55,6 +55,9 @@ class PlayState(BaseState):
             "pot-walk": lambda sm: player_states.PlayerPotWalkState(
                 self.player, sm, self.dungeon
             ),
+            "fire-bow": lambda sm: player_states.PlayerFireBowState(
+                self.player, sm, self.dungeon
+            ),
         }
         self.player.change_state("idle")
 

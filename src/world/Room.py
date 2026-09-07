@@ -175,6 +175,9 @@ class Room:
                     obj.on_consume(self.player, obj)
                     self.objects.remove(obj)
 
+                if obj.interactable:
+                   obj.on_interact(self.player, obj)
+
         for projectile in list(self.projectiles):
             projectile.update(dt)
 
@@ -251,6 +254,32 @@ class Room:
                 self.objects.remove(obj)
                 player.change_state("pot-lift", pot=obj)
                 return
+
+    # def open_adjacent_chest(self, player: Any) -> None:
+    #     player_y = player.y + player.height / 2
+    #     player_height = player.height - player.height / 2
+    #     player_col = int((player.x + player.width / 2) // settings.TILE_SIZE)
+    #     player_row = int((player_y + player_height / 2) // settings.TILE_SIZE)
+
+    #     for obj in self.objects:
+    #         # Ahora el motor evalúa la bandera, no el tipo exacto
+    #         if not obj.interactable:
+    #             continue
+                
+    #         obj_col = int((obj.x + obj.width / 2) // settings.TILE_SIZE)
+    #         obj_row = int((obj.y + obj.height / 2) // settings.TILE_SIZE)
+
+    #         adjacent = (
+    #             (player.direction == "right" and obj_row == player_row and obj_col == player_col + 1)
+    #             or (player.direction == "left" and obj_row == player_row and obj_col == player_col - 1)
+    #             or (player.direction == "up" and obj_col == player_col and obj_row == player_row - 1)
+    #             or (player.direction == "down" and obj_col == player_col and obj_row == player_row + 1)
+    #         )
+
+    #         if adjacent and obj.interactable:
+    #             obj.on_interact(player, obj)
+    #             self.objects.remove(obj)
+    #             return
 
     def _generate_walls_and_floors(self) -> None:
         """
@@ -332,6 +361,25 @@ class Room:
             ),
         )
         self.objects.append(switch)
+
+        if not getattr(self.player, 'hasBow', False):
+            # Le damos una probabilidad (ej. 1 de cada 3 habitaciones) de aparecer
+            if random.randint(1, 1) == 1:
+                chest = GameObject(
+                    GAME_OBJECT_DEFS["chest"],
+                    random.randint(
+                        settings.MAP_RENDER_OFFSET_X + settings.TILE_SIZE,
+                        settings.VIRTUAL_WIDTH - settings.TILE_SIZE * 2 - 16,
+                    ),
+                    random.randint(
+                        settings.MAP_RENDER_OFFSET_Y + settings.TILE_SIZE,
+                        settings.MAP_HEIGHT * settings.TILE_SIZE
+                        + settings.MAP_RENDER_OFFSET_Y
+                        - settings.TILE_SIZE
+                        - 16,
+                    ),
+                )
+                self.objects.append(chest)
 
         def open_all_doors() -> None:
             if switch.state == "unpressed":

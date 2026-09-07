@@ -46,6 +46,12 @@ class PlayerIdleState(BaseEntityState):
             if self.entity.state_machine.current is not self:
                 return
 
+        if self.entity.bowRequest and self.entity.hasBow: # ¡Validar que tenga el arco!
+            self.entity.bowRequest = False
+            self.entity.change_state("fire-bow")
+            print("Proyectil lanzao")
+            return
+
         held = self.entity.held
 
         if held["move_left"] or held["move_right"] or held["move_up"] or held["move_down"]:

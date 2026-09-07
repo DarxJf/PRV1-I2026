@@ -24,6 +24,7 @@ from src.commands import (
     STOP_MOVE_RIGHT,
     STOP_MOVE_UP,
     SWORD,
+    BOW
 )
 from src.Entity import Entity
 
@@ -38,6 +39,9 @@ class Player(Entity):
         self.sword_requested = False
         self.interact_requested = False
 
+        self.hasBow = False
+        self.bowRequest = False
+
         self.command_bindings = CommandBindings()
         self.command_bindings.bind("move_left", press=MOVE_LEFT, release=STOP_MOVE_LEFT)
         self.command_bindings.bind(
@@ -46,7 +50,9 @@ class Player(Entity):
         self.command_bindings.bind("move_up", press=MOVE_UP, release=STOP_MOVE_UP)
         self.command_bindings.bind("move_down", press=MOVE_DOWN, release=STOP_MOVE_DOWN)
         self.command_bindings.bind("sword", press=SWORD)
+        self.command_bindings.bind("bow", press=BOW)
         self.command_bindings.bind("enter", press=INTERACT)
+        self.command_bindings.bind("bow", press=BOW)
 
     def collides(self, target: Any) -> bool:
         """
