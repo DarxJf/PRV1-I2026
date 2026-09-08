@@ -64,6 +64,9 @@ class BattleState(BaseState):
         settings.stop_music("battle")
         self.on_exit()
 
+        for character in self.party.characters.values():
+            character.current_rest = 0.0
+
     def _create_map(self) -> None:
         base = self.tilemap.add_layer("base")
         for y in range(1, BATTLE_HEIGHT + 1):
@@ -101,6 +104,7 @@ class BattleState(BaseState):
                     "baseAttack": enemy_def["baseAttack"],
                     "baseDefense": enemy_def["baseDefense"],
                     "baseMagic": enemy_def["baseMagic"],
+                    "baseRest": enemy_def["baseRest"],
                     "actions": enemy_def["actions"],
                     "direction": "left",
                     "map_x": position["x"],
@@ -146,6 +150,16 @@ class BattleState(BaseState):
                 color=pygame.Color(32, 32, 189),
                 theme=BAR_THEME,
             )
+            character.rest_bar = ProgressBar(
+                character.x - (width - character.width) / 2,
+                character.y - 2, # Posición Y más abajo
+                width,
+                3,
+                value=character.current_rest,
+                max_value=character.rest,
+                color=pygame.Color(255, 255, 0), # Amarillo
+                theme=BAR_THEME,
+            )
 
         for enemy in self.enemies:
             width = math.floor(enemy.width * 1.5)
@@ -159,6 +173,16 @@ class BattleState(BaseState):
                 color=pygame.Color(189, 32, 32),
                 theme=BAR_THEME,
             )
+            enemy.rest_bar = ProgressBar(
+                enemy.x - (width - enemy.width) / 2,
+                enemy.y - 6, # Posición Y más abajo
+                width,
+                3,
+                value=enemy.current_rest,
+                max_value=enemy.rest,
+                color=pygame.Color(255, 255, 0), # Amarillo
+                theme=BAR_THEME,
+            )
 
     def update(self, dt: float) -> None:
         if not self.battle_started:
@@ -169,30 +193,43 @@ class BattleState(BaseState):
             if not enemy.dead:
                 enemy.update(dt)
 
+        all_entities = list(self.party.characters.values()) + self.enemies
+        
+        for entity in all_entities:
+            if entity.dead:
+                continue
+
+            entity.current_rest += dt
+            entity.rest_bar.value = entity.current_rest
+            
+            # La primera entidad que complete su tiempo obtiene el turno[cite: 1]
+            if entity.current_rest >= entity.rest:
+                entity.current_rest = 0.0  # Reseteamos su contador
+                entity.rest_bar.value = 0.0
+                
+                # Apilamos el turno, lo que congelará este update automáticamente[cite: 12]
+                from src.states.game.TakeTurnState import TakeTurnState
+                self.state_machine.push(
+                    TakeTurnState(self.state_machine),
+                    battle_state=self,
+                    entity=entity
+                )
+                break
+
     def _trigger_starting_dialogue(self) -> None:
-        from src.states.game.BattleMenuState import BattleMenuState
         from src.states.game.BattleMessageState import BattleMessageState
 
         def show_go_message() -> None:
-            names = ", ".join(
-                c.name for c in self.party.characters.values() if not c.dead
-            )
-            boss_warning = (
-                "The final boss is here, this is your opportunity to save the "
-                "world! "
-                if self.final_boss
-                else ""
-            )
-            message = f"{boss_warning}Go, {names}!"
+            names = ", ".join(c.name for c in self.party.characters.values() if not c.dead)
+            boss_warning = "The final boss is here... " if self.final_boss else ""
+            
+            # Al cerrar este mensaje, el flujo volverá a BattleState y el tiempo empezará a correr
             self.state_machine.push(
                 BattleMessageState(self.state_machine),
                 battle_state=self,
-                message=message,
-                on_close=open_menu,
+                message=f"{boss_warning}Go, {names}!",
+                on_close=lambda: None,
             )
-
-        def open_menu() -> None:
-            self.state_machine.push(BattleMenuState(self.state_machine), battle_state=self)
 
         self.state_machine.push(
             BattleMessageState(self.state_machine),
@@ -220,11 +257,13 @@ class BattleState(BaseState):
             if not enemy.dead:
                 enemy.render(surface)
                 enemy.energy_bar.render(surface)
+                enemy.rest_bar.render(surface)
 
         for character in self.party.characters.values():
             if not character.dead:
                 character.render(surface)
                 character.energy_bar.render(surface)
                 character.exp_bar.render(surface)
+                character.rest_bar.render(surface)
 
         self.bottom_panel.render(surface)

@@ -153,6 +153,7 @@ ENTITY_DEFS = {
             "baseAttack": 10,
             "baseDefense": 10,
             "baseMagic": 0,
+            "baseRest": 3.0,  # Velocidad estándar
             "HPIV": 4,
             "attackIV": 5,
             "defenseIV": 5,
@@ -177,6 +178,7 @@ ENTITY_DEFS = {
             "baseAttack": 12,
             "baseDefense": 8,
             "baseMagic": 1,
+            "baseRest": 2.0,  # Muy rápido
             "HPIV": 2,
             "attackIV": 7,
             "defenseIV": 4,
@@ -209,6 +211,7 @@ ENTITY_DEFS = {
             "baseAttack": 2,
             "baseDefense": 5,
             "baseMagic": 10,
+            "baseRest": 2.5,  # Velocidad media-alta
             "HPIV": 2,
             "attackIV": 2,
             "defenseIV": 2,
@@ -241,6 +244,7 @@ ENTITY_DEFS = {
             "baseAttack": 5,
             "baseDefense": 5,
             "baseMagic": 12,
+            "baseRest": 3.5,  # Lento pero poderoso
             "HPIV": 2,
             "attackIV": 3,
             "defenseIV": 2,
@@ -285,6 +289,7 @@ ENTITY_DEFS = {
                 "baseAttack": 20,
                 "baseDefense": 5,
                 "baseMagic": 0,
+                "baseRest": 2.5,
                 "animations": {
                     "default": {"frames": [4, 5, 6], "interval": 0.3},
                 },
@@ -310,6 +315,7 @@ ENTITY_DEFS = {
                 "baseAttack": 30,
                 "baseDefense": 7,
                 "baseMagic": 0,
+                "baseRest": 3.0,
                 "animations": {
                     "default": {"frames": [4, 5, 6], "interval": 0.15},
                 },
@@ -335,6 +341,7 @@ ENTITY_DEFS = {
                 "baseAttack": 40,
                 "baseDefense": 15,
                 "baseMagic": 2,
+                "baseRest": 2.2,
                 "animations": {
                     "default": {"frames": [4, 5, 6], "interval": 0.15},
                 },
@@ -360,6 +367,7 @@ ENTITY_DEFS = {
                 "baseAttack": 60,
                 "baseDefense": 18,
                 "baseMagic": 5,
+                "baseRest": 3.5,
                 "animations": {
                     "default": {"frames": [4, 5, 6], "interval": 0.15},
                 },
@@ -385,6 +393,7 @@ ENTITY_DEFS = {
             "baseAttack": 100,
             "baseDefense": 30,
             "baseMagic": 30,
+            "baseRest": 3.0,
             "animations": {
                 "default": {"frames": [4, 5, 6], "interval": 0.15},
             },

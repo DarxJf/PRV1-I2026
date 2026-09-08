@@ -26,72 +26,55 @@ import settings
 
 
 class TakeTurnState(BaseState):
-    def enter(self, battle_state: Any) -> None:
+    def enter(self, battle_state: Any, entity: Any) -> None:
         self.battle_state = battle_state
-        self.enemy_attacks_in_a_row = 0
-        self._take_party_turn(0)
+        self.entity = entity
+        
+        # Diferenciar si el turno es del jugador o del enemigo
+        if self.entity in self.battle_state.party.characters.values():
+            self._take_party_turn()
+        else:
+            self._take_enemy_turn()
 
     def _party_keys(self):
         return sorted(self.battle_state.party.characters.keys())
 
-    # -- party turns ---------------------------------------------------
-
-    def _take_party_turn(self, index: int) -> None:
-        keys = self._party_keys()
-
-        if index >= len(keys):
-            self._take_enemy_turn(0)
-            return
-
-        character = self.battle_state.party.characters[keys[index]]
-
-        if character.dead:
-            self._take_party_turn(index + 1)
-            return
-
+    # -- party turn ---------------------------------------------------
+    def _take_party_turn(self) -> None:
         from src.states.game.BattleMessageState import BattleMessageState
 
         self.state_machine.push(
             BattleMessageState(self.state_machine),
             battle_state=self.battle_state,
-            message=f"Turn for {character.name}! Select an action.",
-            on_close=lambda: self._prompt_action(character, index),
+            message=f"Turn for {self.entity.name}! Select an action.",
+            on_close=self._prompt_action,
         )
 
-    def _prompt_action(self, character: Any, index: int) -> None:
+    def _prompt_action(self) -> None:
         from src.states.game.SelectActionState import SelectActionState
 
         def on_action_selected() -> None:
+            # Revisar condiciones de fin de combate tras la acción
             if all(enemy.dead for enemy in self.battle_state.enemies):
                 self._victory()
+            elif all(char.dead for char in self.battle_state.party.characters.values()):
+                self._faint()
             else:
-                self._take_party_turn(index + 1)
+                self.state_machine.pop() # Termina el turno, descongela BattleState
 
         self.state_machine.push(
             SelectActionState(self.state_machine),
             battle_state=self.battle_state,
-            entity=character,
+            entity=self.entity,
             on_action_selected=on_action_selected,
         )
 
-    # -- enemy turns ----------------------------------------------------
-
-    def _take_enemy_turn(self, index: int) -> None:
-        enemies = self.battle_state.enemies
-
-        if index >= len(enemies):
-            self._take_party_turn(0)
-            return
-
-        enemy = enemies[index]
-
-        if enemy.dead:
-            self._take_enemy_turn(index + 1)
-            return
-
-        self.enemy_attacks_in_a_row += 1
+    # -- enemy turn ----------------------------------------------------
+    def _take_enemy_turn(self) -> None:
+        enemy = self.entity
         action = random.choice(enemy.actions)
 
+        # Lógica original de resolución de ataque de la IA...
         if action["target_type"] == "enemy":
             targets = list(self.battle_state.party.characters.values())
             target_label = "you"
@@ -110,31 +93,19 @@ class TakeTurnState(BaseState):
             alive_targets = [target for target in targets if not target.dead]
             amount = action["func"](enemy, alive_targets, action.get("strength"))
             settings.SOUNDS[action["sound_effect"]].play()
-
             for target in alive_targets:
                 Timer.tween(0.5, [(target.energy_bar, {"value": target.current_hp})])
-
-            message = (
-                f"{enemy.name} used {action['name']} for {amount} HP on all of "
-                f"{target_label}."
-            )
-
-        if all(character.dead for character in self.battle_state.party.characters.values()):
-            self._faint()
-            return
+            message = f"{enemy.name} used {action['name']} for {amount} HP on all of {target_label}."
 
         from src.states.game.BattleMessageState import BattleMessageState
 
         def on_message_close() -> None:
-            if (
-                self.enemy_attacks_in_a_row < 3
-                and enemy.klass == "boss"
-                and random.randint(1, 3) == 1
-            ):
-                self._take_enemy_turn(index)
+            if all(char.dead for char in self.battle_state.party.characters.values()):
+                self._faint()
+            elif all(e.dead for e in self.battle_state.enemies):
+                self._victory()
             else:
-                self.enemy_attacks_in_a_row = 0
-                self._take_enemy_turn(index + 1)
+                self.state_machine.pop() # Termina el turno de la IA
 
         self.state_machine.push(
             BattleMessageState(self.state_machine),

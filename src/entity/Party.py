@@ -63,6 +63,7 @@ class Party:
                     "baseAttack": char_def["baseAttack"],
                     "baseDefense": char_def["baseDefense"],
                     "baseMagic": char_def["baseMagic"],
+                    "baseRest": char_def["baseRest"],
                     "HPIV": char_def["HPIV"],
                     "attackIV": char_def["attackIV"],
                     "defenseIV": char_def["defenseIV"],

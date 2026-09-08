@@ -30,13 +30,16 @@ class BattleEntity(Entity):
         self.base_attack: float = definition["baseAttack"]
         self.base_defense: float = definition["baseDefense"]
         self.base_magic: float = definition["baseMagic"]
+        self.base_rest: float = definition["baseRest"] 
 
         self.hp: float = self.base_hp
         self.attack: float = self.base_attack
         self.defense: float = self.base_defense
         self.magic: float = self.base_magic
+        self.rest: float = self.base_rest if self.base_rest is not None else definition.get("baseRest", 3.0) 
 
         self.current_hp: float = self.hp
+        self.current_rest: float = 0.0
 
     def damage(self, amount: float) -> None:
         self.current_hp -= amount
