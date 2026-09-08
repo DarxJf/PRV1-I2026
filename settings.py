@@ -1,12 +1,12 @@
 """
 ISPPV1 2023
-Study Case: The Legend of the Princess (ARPG)
+Study Case: Ultimate Fantasy (RPG)
 
 Author: Alejandro Mujica
 alejandro.j.mujic4@gmail.com
 
 This file contains the game settings that include the association of the
-inputs with an their ids, constants of values to set up the game, sounds,
+inputs with their ids, constants of values to set up the game, sounds,
 textures, frames, and fonts.
 """
 
@@ -23,93 +23,134 @@ input_handler.InputHandler.set_keyboard_action(input_handler.KEY_LEFT, "move_lef
 input_handler.InputHandler.set_keyboard_action(input_handler.KEY_RIGHT, "move_right")
 input_handler.InputHandler.set_keyboard_action(input_handler.KEY_UP, "move_up")
 input_handler.InputHandler.set_keyboard_action(input_handler.KEY_DOWN, "move_down")
-input_handler.InputHandler.set_keyboard_action(input_handler.KEY_SPACE, "sword")
+input_handler.InputHandler.set_keyboard_action(input_handler.KEY_SPACE, "space")
 input_handler.InputHandler.set_keyboard_action(input_handler.KEY_RETURN, "enter")
-input_handler.InputHandler.set_keyboard_action(input_handler.KEY_f, "bow")
+input_handler.InputHandler.set_keyboard_action(input_handler.KEY_KP_ENTER, "enter")
+input_handler.InputHandler.set_keyboard_action(input_handler.KEY_p, "pause")
 
-TITLE = "The Legend of the Princess"
+TITLE = "Ultimate Fantasy"
+
+# gale.save.SaveManager slot names available for this game's 3 save slots
+# (StartState/PauseMenuState's "Load game", PauseMenuState's "Save
+# game" -- see SlotSelectState).
+SAVE_SLOTS = ["slot1", "slot2", "slot3"]
 
 BASE_DIR = pathlib.Path(__file__).parent
 
+# Absolute, so saves always land next to this game regardless of the
+# working directory the game happens to be launched from -- gale.save's
+# own default ("saves") is a relative path resolved against the
+# process's cwd, not this file's location.
+SAVE_DIR = BASE_DIR / "saves"
+
 VIRTUAL_WIDTH = 384
-VIRTUAL_HEIGHT = 216
+VIRTUAL_HEIGHT = 224
 
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
 
 TILE_SIZE = 16
 
-#
-# map constants
-#
-MAP_WIDTH = VIRTUAL_WIDTH // TILE_SIZE - 2
-MAP_HEIGHT = VIRTUAL_HEIGHT // TILE_SIZE - 2
-
-MAP_RENDER_OFFSET_X = (VIRTUAL_WIDTH - MAP_WIDTH * TILE_SIZE) // 2
-MAP_RENDER_OFFSET_Y = (VIRTUAL_HEIGHT - MAP_HEIGHT * TILE_SIZE) // 2
+TILE_WIDTH = VIRTUAL_WIDTH // TILE_SIZE
+TILE_HEIGHT = VIRTUAL_HEIGHT // TILE_SIZE
 
 #
-# tile IDs (1-based, matching the tilesheet's row-major slicing)
+# tile ids (1-based, matching the tilesheet's slicing -- see settings.frame())
 #
-TILE_TOP_LEFT_CORNER = 4
-TILE_TOP_RIGHT_CORNER = 5
-TILE_BOTTOM_LEFT_CORNER = 23
-TILE_BOTTOM_RIGHT_CORNER = 24
-
-TILE_EMPTY = 19
-
-TILE_FLOORS = [
-    7, 8, 9, 10, 11, 12, 13,
-    26, 27, 28, 29, 30, 31, 32,
-    45, 46, 47, 48, 49, 50, 51,
-    64, 65, 66, 67, 68, 69, 70,
-    88, 89, 107, 108,
-]
-
-TILE_TOP_WALLS = [58, 59, 60]
-TILE_BOTTOM_WALLS = [79, 80, 81]
-TILE_LEFT_WALLS = [77, 96, 115]
-TILE_RIGHT_WALLS = [78, 97, 116]
-
-TEXTURES = {
-    "tiles": pygame.image.load(BASE_DIR / "assets" / "graphics" / "tilesheet.png"),
-    "background": pygame.image.load(BASE_DIR / "assets" / "graphics" / "background.png"),
-    "character-walk": pygame.image.load(
-        BASE_DIR / "assets" / "graphics" / "character_walk.png"
-    ),
-    "character-swing-sword": pygame.image.load(
-        BASE_DIR / "assets" / "graphics" / "character_swing_sword.png"
-    ),
-    "hearts": pygame.image.load(BASE_DIR / "assets" / "graphics" / "hearts.png"),
-    "switches": pygame.image.load(BASE_DIR / "assets" / "graphics" / "switches.png"),
-    "entities": pygame.image.load(BASE_DIR / "assets" / "graphics" / "entities.png"),
-    "character-pot-lift": pygame.image.load(
-        BASE_DIR / "assets" / "graphics" / "character_pot_lift.png"
-    ),
-    "character-pot-walk": pygame.image.load(
-        BASE_DIR / "assets" / "graphics" / "character_pot_walk.png"
-    ),
-    "arrows": pygame.image.load(BASE_DIR / "assets" / "graphics" / "arrows.png"),
-    "fireball": pygame.image.load(BASE_DIR / "assets" / "graphics" / "fireball.png"),
+TILE_IDS = {
+    "grass": [46, 47],
+    "flowers": [16, 24, 32, 40, 48, 56, 64, 72],
+    "empty": 101,
+    "tall-grass": 42,
+    "half-tall-grass": 50,
+    "top-left-fence": 73,
+    "top-fence": 74,
+    "top-right-fence": 75,
+    "left-fence": 81,
+    "right-fence": 83,
+    "bottom-left-fence": 89,
+    "bottom-fence": 90,
+    "bottom-right-fence": 91,
+    "border-left-fence": 65,
+    "border-right-fence": 66,
+    "border-top-left-fence": 88,
+    "border-bottom-left-fence": 87,
+    "border-top-right-fence": 96,
+    "border-bottom-right-fence": 95,
 }
 
-# Used by Room's gale.tilemap.TileMap: TILE_* ids above are 1-based,
-# matching this tileset's default first_gid, so they double as gids.
+TEXTURES = {
+    "tiles": pygame.image.load(BASE_DIR / "assets" / "graphics" / "sheet.png"),
+    "background": pygame.image.load(BASE_DIR / "assets" / "graphics" / "background.png"),
+    "cursor-right": pygame.image.load(
+        BASE_DIR / "assets" / "graphics" / "cursor_right.png"
+    ),
+    "cursor-up": pygame.image.load(BASE_DIR / "assets" / "graphics" / "cursor_up.png"),
+    "healer-female": pygame.image.load(
+        BASE_DIR / "assets" / "graphics" / "characters" / "healer_f.png"
+    ),
+    "healer-male": pygame.image.load(
+        BASE_DIR / "assets" / "graphics" / "characters" / "healer_m.png"
+    ),
+    "mage-female": pygame.image.load(
+        BASE_DIR / "assets" / "graphics" / "characters" / "mage_f.png"
+    ),
+    "mage-male": pygame.image.load(
+        BASE_DIR / "assets" / "graphics" / "characters" / "mage_m.png"
+    ),
+    "warrior-female": pygame.image.load(
+        BASE_DIR / "assets" / "graphics" / "characters" / "warrior_f.png"
+    ),
+    "warrior-male": pygame.image.load(
+        BASE_DIR / "assets" / "graphics" / "characters" / "warrior_m.png"
+    ),
+    "ranger-female": pygame.image.load(
+        BASE_DIR / "assets" / "graphics" / "characters" / "ranger_f.png"
+    ),
+    "ranger-male": pygame.image.load(
+        BASE_DIR / "assets" / "graphics" / "characters" / "ranger_m.png"
+    ),
+    "npc-female": pygame.image.load(
+        BASE_DIR / "assets" / "graphics" / "characters" / "townfolk_f.png"
+    ),
+    "npc-male": pygame.image.load(
+        BASE_DIR / "assets" / "graphics" / "characters" / "townfolk_m.png"
+    ),
+    "slime": pygame.image.load(BASE_DIR / "assets" / "graphics" / "enemies" / "slime.png"),
+    "small-worm": pygame.image.load(
+        BASE_DIR / "assets" / "graphics" / "enemies" / "small_worm.png"
+    ),
+    "snake": pygame.image.load(BASE_DIR / "assets" / "graphics" / "enemies" / "snake.png"),
+    "pumpking": pygame.image.load(
+        BASE_DIR / "assets" / "graphics" / "enemies" / "pumpking.png"
+    ),
+    "man-eater-flower": pygame.image.load(
+        BASE_DIR / "assets" / "graphics" / "enemies" / "man_eater_flower.png"
+    ),
+}
+
+# Shared by every gale.tilemap.TileMap in the game (world regions and
+# battle backgrounds alike): tile ids in TILE_IDS above are 1-based,
+# matching this tileset's default first_gid, so they double as gids
+# with no remapping.
 TILESET = tilemap.Tileset(TEXTURES["tiles"], TILE_SIZE, TILE_SIZE)
 
 FRAMES = {
-    "tiles": frames.generate_frames(TEXTURES["tiles"], 16, 16),
-    "character-walk": frames.generate_frames(TEXTURES["character-walk"], 16, 32),
-    "character-swing-sword": frames.generate_frames(
-        TEXTURES["character-swing-sword"], 32, 32
-    ),
-    "hearts": frames.generate_frames(TEXTURES["hearts"], 16, 16),
-    "switches": frames.generate_frames(TEXTURES["switches"], 16, 18),
-    "entities": frames.generate_frames(TEXTURES["entities"], 16, 16),
-    "character-pot-lift": frames.generate_frames(TEXTURES["character-pot-lift"], 16, 32),
-    "character-pot-walk": frames.generate_frames(TEXTURES["character-pot-walk"], 16, 32),
-    "arrows": frames.generate_frames(TEXTURES["arrows"], 16, 16),
-    "fireball": frames.generate_frames(TEXTURES["fireball"], 16, 16),
+    "healer-female": frames.generate_frames(TEXTURES["healer-female"], 16, 18),
+    "healer-male": frames.generate_frames(TEXTURES["healer-male"], 16, 18),
+    "mage-female": frames.generate_frames(TEXTURES["mage-female"], 16, 18),
+    "mage-male": frames.generate_frames(TEXTURES["mage-male"], 16, 18),
+    "warrior-female": frames.generate_frames(TEXTURES["warrior-female"], 16, 18),
+    "warrior-male": frames.generate_frames(TEXTURES["warrior-male"], 16, 18),
+    "ranger-female": frames.generate_frames(TEXTURES["ranger-female"], 16, 18),
+    "ranger-male": frames.generate_frames(TEXTURES["ranger-male"], 16, 18),
+    "npc-female": frames.generate_frames(TEXTURES["npc-female"], 16, 18),
+    "npc-male": frames.generate_frames(TEXTURES["npc-male"], 16, 18),
+    "slime": frames.generate_frames(TEXTURES["slime"], 16, 16),
+    "small-worm": frames.generate_frames(TEXTURES["small-worm"], 16, 16),
+    "snake": frames.generate_frames(TEXTURES["snake"], 16, 16),
+    "pumpking": frames.generate_frames(TEXTURES["pumpking"], 23, 23),
+    "man-eater-flower": frames.generate_frames(TEXTURES["man-eater-flower"], 30, 38),
 }
 
 
@@ -124,29 +165,63 @@ def frame(texture_id, one_based_index):
 
 
 FONTS = {
-    "princess": pygame.font.Font(BASE_DIR / "assets" / "fonts" / "princess.otf", 32),
-    "princess-small": pygame.font.Font(
-        BASE_DIR / "assets" / "fonts" / "princess.otf", 24
-    ),
+    "small": pygame.font.Font(BASE_DIR / "assets" / "fonts" / "font.ttf", 8),
+    "medium": pygame.font.Font(BASE_DIR / "assets" / "fonts" / "font.ttf", 16),
+    "large": pygame.font.Font(BASE_DIR / "assets" / "fonts" / "font.ttf", 32),
+    "ff": pygame.font.Font(BASE_DIR / "assets" / "fonts" / "finalf.ttf", 48),
+    "ff-small": pygame.font.Font(BASE_DIR / "assets" / "fonts" / "finalf.ttf", 24),
 }
 
 SOUNDS = {
-    "sword": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "sword.wav"),
-    "hit-enemy": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "hit_enemy.wav"),
-    "hit-player": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "hit_player.wav"),
-    "door": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "door.wav"),
-    "heart-taken": pygame.mixer.Sound(
-        BASE_DIR / "assets" / "sounds" / "heart_taken.wav"
-    ),
-    "pot-wall": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "pot_wall.wav"),
+    "intro": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "intro.mp3"),
+    "town": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "town.mp3"),
+    "world": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "world.mp3"),
+    "blip": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "blip.wav"),
+    "battle": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "battle.mp3"),
+    "run": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "run.wav"),
+    "hit": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "hit.wav"),
+    "powerup": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "powerup.wav"),
+    "arrows": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "arrows.wav"),
+    "flame": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "flame.ogg"),
+    "game-over": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "game_over.mp3"),
+    "victory": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "victory.wav"),
+    "levelup": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "levelup.wav"),
+    "exp": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "exp.wav"),
+    "the-end": pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "the_end.mp3"),
 }
 
-MUSIC = {
-    "start": str(BASE_DIR / "assets" / "sounds" / "start_music.mp3"),
-    "dungeon": str(BASE_DIR / "assets" / "sounds" / "dungeon_music.mp3"),
-    "game-over": str(BASE_DIR / "assets" / "sounds" / "game_over_music.mp3"),
+MUSIC_CHANNELS = {
+    "intro": None,
+    "town": None,
+    "world": None,
+    "battle": None,
+    "game-over": None,
+    "the-end": None,
 }
 
-COLOR_TITLE_SHADOW = (34, 34, 34)
-COLOR_TITLE = (175, 53, 42)
-COLOR_WHITE = (255, 255, 255)
+
+def play_music(name: str) -> None:
+    stop_music(name)
+    MUSIC_CHANNELS[name] = SOUNDS[name].play(loops=-1)
+
+
+def stop_music(name: str) -> None:
+    channel = MUSIC_CHANNELS.get(name)
+
+    if channel is not None:
+        channel.stop()
+        MUSIC_CHANNELS[name] = None
+
+
+def pause_music(name: str) -> None:
+    channel = MUSIC_CHANNELS.get(name)
+
+    if channel is not None:
+        channel.pause()
+
+
+def resume_music(name: str) -> None:
+    channel = MUSIC_CHANNELS.get(name)
+
+    if channel is not None:
+        channel.unpause()

@@ -1,53 +1,47 @@
 """
 ISPPV1 2023
-Study Case: The Legend of the Princess (ARPG)
+Study Case: Ultimate Fantasy (RPG)
 
 Author: Alejandro Mujica
 alejandro.j.mujic4@gmail.com
 
-This file contains the class GameOverState for the game.
+This file contains the class GameOverState: shown on a full party wipe.
+Enter/Return stops every sound, clears the whole state stack, and
+restarts at StartState.
 """
 
-from typing import TypeVar
+from typing import Any
 
 import pygame
 
-from gale.input_handler import InputData
 from gale.state import BaseState
-from gale.text import render_text
 
 import settings
 
 
 class GameOverState(BaseState):
-    def enter(self, player: TypeVar("Player")) -> None:
-        self.player = player
-        pygame.mixer.music.load(settings.MUSIC["game-over"])
-        pygame.mixer.music.play()
-
-    def exit(self) -> None:
-        pygame.mixer.music.stop()
-
-    def on_input(self, input_id: str, input_data: InputData) -> None:
+    def on_input(self, input_id: str, input_data: Any) -> None:
         if input_id == "enter" and input_data.pressed:
-            self.state_machine.change("start")
+            for sound in settings.SOUNDS.values():
+                sound.stop()
+
+            self.state_machine.clear()
+
+            from src.states.game.StartState import StartState
+
+            self.state_machine.push(StartState(self.state_machine))
 
     def render(self, surface: pygame.Surface) -> None:
-        render_text(
-            surface,
-            "GAME OVER",
-            settings.FONTS["princess"],
-            settings.VIRTUAL_WIDTH / 2,
-            settings.VIRTUAL_HEIGHT / 2 - 48,
-            settings.COLOR_TITLE,
-            center=True,
+        surface.fill((0, 0, 0))
+
+        medium = settings.FONTS["medium"]
+        text = medium.render("Your party was defeated!", True, (255, 255, 255))
+        rect = text.get_rect(center=(settings.VIRTUAL_WIDTH / 2, 10 + text.get_height() / 2))
+        surface.blit(text, rect)
+
+        large = settings.FONTS["large"]
+        title = large.render("Game Over", True, (255, 255, 255))
+        rect = title.get_rect(
+            center=(settings.VIRTUAL_WIDTH / 2, settings.VIRTUAL_HEIGHT / 2 - 32)
         )
-        render_text(
-            surface,
-            "Press Enter",
-            settings.FONTS["princess-small"],
-            settings.VIRTUAL_WIDTH / 2,
-            settings.VIRTUAL_HEIGHT / 2 + 16,
-            settings.COLOR_WHITE,
-            center=True,
-        )
+        surface.blit(title, rect)
