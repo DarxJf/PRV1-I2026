@@ -91,6 +91,8 @@ class PlayState(BaseState):
     def enter(self) -> None:
         self.world = World(gravity=settings.GRAVITY)
 
+        self.world.on_collision_begin(self._on_collision)
+
         self.level = Level(self.world)
         self.bird = Bird(self.world, self.level.bird_start.x, self.level.bird_start.y)
         self.birds: Bird = [self.bird]
@@ -162,20 +164,29 @@ class PlayState(BaseState):
         self.bird.body.angular_velocity = 0.0
 
     def _update_idle(self) -> None:
-        linear_speed = self.bird.body.velocity.length()
-        angular_speed = abs(self.bird.body.angular_velocity)
-
-        if (
-            linear_speed < IDLE_LINEAR_SPEED_THRESHOLD
-            and angular_speed < IDLE_ANGULAR_SPEED_THRESHOLD
-        ):
+        all_idle = True
+        for b in self.birds:
+            linear_speed = b.body.velocity.length()
+            angular_speed = abs(b.body.angular_velocity)
+            if linear_speed >= IDLE_LINEAR_SPEED_THRESHOLD or angular_speed >= IDLE_ANGULAR_SPEED_THRESHOLD:
+                all_idle = False
+                break
+                
+        if all_idle:
             self.idle_frames += 1
-
             if self.idle_frames > IDLE_FRAMES_LIMIT:
                 self.flinging = False
                 self.idle_frames = 0
-                self.bird.reset()
-                self.camera_target.update(self.bird.position)
+                
+                # Limpiar clones del mundo físico
+                for b in self.birds[1:]:
+                    self.world.destroy_body(b.body) 
+                
+                self.birds = [self.birds[0]]
+                self.split_used = False
+                self.has_collided = False
+                self.birds[0].reset()
+                self.camera_target.update(self.birds[0].position)
         else:
             self.idle_frames = 0
 
@@ -192,7 +203,9 @@ class PlayState(BaseState):
     def render(self, surface: pygame.Surface) -> None:
         surface.fill(settings.BG_COLOR)
         self.level.render(surface, self.camera)
-        self.bird.render(surface, self.camera)
+
+        for b in self.birds:
+            b.render(surface, self.camera)
 
         if self.aiming:
             self._render_pull_line(surface)
@@ -209,6 +222,8 @@ class PlayState(BaseState):
             self._on_touch(input_data)
         elif input_id == "touch_motion":
             self._on_touch_motion(input_data)
+        elif input_id == "div" and input_data.pressed:
+            self._split_bird()
 
     def _mouse_to_virtual(self, position) -> pygame.Vector2:
         scale_x = settings.VIRTUAL_WIDTH / settings.WINDOW_WIDTH
@@ -275,3 +290,34 @@ class PlayState(BaseState):
                 left - CAMERA_PAN_MARGIN, min(right + CAMERA_PAN_MARGIN, target.x)
             )
             self.camera_target.update(target)
+
+    def _split_bird(self) -> None:
+        # Condición: Solo en vuelo, si no se ha usado y si no ha chocado
+        if not self.flinging or self.split_used or self.has_collided:
+            return
+            
+        self.split_used = True
+        main_bird = self.birds[0]
+        pos_x, pos_y = main_bird.position
+        vel_x, vel_y = main_bird.body.velocity
+        
+        # Crear aves en la posición exacta
+        bird_up = Bird(self.world, pos_x, pos_y)
+        bird_down = Bird(self.world, pos_x, pos_y)
+        
+        # Desviar sus trayectorias sumando/restando a su vector de velocidad
+        desviacion_y = 150 
+        bird_up.body.velocity = (vel_x, vel_y - desviacion_y)
+        bird_down.body.velocity = (vel_x, vel_y + desviacion_y)
+        
+        self.birds.extend([bird_up, bird_down])
+
+    def _on_collision(self, body_a, body_b) -> None:
+        # Recuperamos la entidad dueña de cada cuerpo usando user_data
+        entity_a = body_a.user_data
+        entity_b = body_b.user_data
+        
+        # Si alguno de los dos objetos involucrados en el choque es de la clase Bird...
+        if isinstance(entity_a, Bird) or isinstance(entity_b, Bird):
+            # ...deshabilitamos el poder de división
+            self.has_collided = True
