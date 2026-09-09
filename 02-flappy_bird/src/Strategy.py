@@ -49,13 +49,13 @@ class HardStrategy(Strategy):
     def update_obstacles(self, world: World, dt: float) -> None:
         world.update(dt)
         world.logs_spawn_timer += dt
-        if world.logs_spawn_timer >= settings.TIME_TO_SPAWN_LOGS + 0.5:
+        if world.logs_spawn_timer >= settings.TIME_TO_SPAWN_LOGS + random.uniform(0.1, 0.4):
             world.logs_spawn_timer = 0.0
             y = max(
-                -settings.LOG_HEIGHT + 20,
+                -settings.LOG_HEIGHT + 10,
                 min(
-                    world.last_log_y + random.randint(-40, 40),
-                       settings.VIRTUAL_HEIGHT + 200 - settings.LOG_HEIGHT,
+                    world.last_log_y + random.randint(-60, 60),
+                    settings.VIRTUAL_HEIGHT + 90 - settings.LOG_HEIGHT,
                 ),
             )
             world.last_log_y = y

@@ -34,7 +34,9 @@ class PlayingState(BaseState):
             settings.BIRD_HEIGHT,
         )
         self.score = score
-        self.strategy = strategy
+        self.strategy: Strategy = strategy
+
+        Timer.resume()
 
     def update(self, dt: float) -> None:
         self.strategy.update_bird(self.bird, dt)
@@ -72,7 +74,10 @@ class PlayingState(BaseState):
         )
 
     def exit(self):
-        Timer.clear()
+        if self.world.collides(self.bird.get_rect()):
+            Timer.clear()
+        else:
+            Timer.pause()
 
     def on_input(self, input_id: str, input_data: InputData) -> None:
         if input_id == "jump" and input_data.pressed:
@@ -89,4 +94,4 @@ class PlayingState(BaseState):
                 self.bird.movingLeft = False
         elif input_id == "pause" and input_data.pressed:
             settings.SOUNDS["paused"].play()
-            self.state_machine.change("pause", self.world, self.bird, self.score)
+            self.state_machine.change("pause", self.world, self.bird, self.score, self.strategy)
