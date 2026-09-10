@@ -35,11 +35,17 @@ class PlayState(BaseState):
 
         self.highlighted_tile = False
 
-        self.active = True
-
         self.timer = settings.LEVEL_TIME
 
         self.goal_score = self.level * 1.25 * 1000
+
+        # Fundido en negro
+        self.overlay_alpha = 0
+        self.overlay_surface = pygame.Surface(
+            (settings.VIRTUAL_WIDTH, settings.VIRTUAL_HEIGHT), 
+            pygame.SRCALPHA
+        )
+        self.overlay_surface.fill((0, 0, 0)) # Negro puro
 
         # A surface that supports alpha to highlight a selected tile
         self.tile_alpha_surface = pygame.Surface(
@@ -73,6 +79,13 @@ class PlayState(BaseState):
                 settings.SOUNDS["clock"].play()
 
         Timer.every(1, decrement_timer)
+
+        if not self.board.has_matches():
+            # Disparamos la misma animación de fundido a negro
+            self._trigger_shuffle_animation()
+        else:
+            # Si sí hay jugadas, activamos al jugador normalmente
+            self.active = True
 
     def update(self, _: float) -> None:
         if self.timer <= 0:
@@ -131,6 +144,34 @@ class PlayState(BaseState):
             shadowed=True,
         )
 
+        if self.overlay_alpha > 0:
+            self.overlay_surface.set_alpha(int(self.overlay_alpha))
+            surface.blit(self.overlay_surface, (0, 0))
+
+            if self.overlay_alpha > 200 and hasattr(self, 'shuffle_text'):
+                import math
+                font = settings.FONTS["medium"]
+                
+                # Ancho total para centrar la palabra
+                total_width = sum([font.size(char)[0] for char in self.shuffle_text])
+                start_x = (settings.VIRTUAL_WIDTH - total_width) // 2
+                
+                current_x = start_x
+                
+                # Usamos el tiempo real de pygame para que la onda de movimiento fluya
+                time_now = pygame.time.get_ticks() / 150.0 
+                
+                for i, char in enumerate(self.shuffle_text):
+                    # Movimiento vertical oscilatorio usando seno
+                    offset_y = math.sin(time_now + i) * 5 
+                    
+                    # Dibujamos la letra con su respectivo movimiento
+                    char_surface = font.render(char, True, (255, 255, 255))
+                    surface.blit(char_surface, (current_x, (settings.VIRTUAL_HEIGHT // 2) + offset_y))
+                    
+                    # Avanzamos x para la siguiente letra
+                    current_x += font.size(char)[0]
+
     def on_input(self, input_id: str, input_data: InputData) -> None:
         if not self.active:
             return
@@ -180,7 +221,7 @@ class PlayState(BaseState):
                                 falling_tiles = self.board.get_falling_tiles()
                             
                                 Timer.tween(
-                                    0.25,
+                                    0.5,
                                     falling_tiles,
                                     on_finish=lambda: self._calculate_matches(
                                         [item[0] for item in falling_tiles], -1, -1
@@ -206,6 +247,13 @@ class PlayState(BaseState):
                                 tile1.i, tile1.j, tile2.i, tile2.j = (
                                     tile2.i, tile2.j, tile1.i, tile1.j,
                                 )
+
+                                tile1.x = tile1.j * settings.TILE_SIZE
+                                tile1.y = tile1.i * settings.TILE_SIZE
+                                tile2.x = tile2.j * settings.TILE_SIZE
+                                tile2.y = tile2.i * settings.TILE_SIZE
+
+                                self.active = True
 
                             def arrive():
                                 tile1 = self.board.tiles[self.dragged_i][self.dragged_j]
@@ -271,9 +319,13 @@ class PlayState(BaseState):
         matches = self.board.calculate_matches_for(tiles)
 
         if matches is None:
-            if not self.board.has_matches():
-                self.board.shuffle_board()
-            self.active = True
+            
+            if last_i == -1 and last_j == -1:
+                if not self.board.has_matches():
+                    self._trigger_shuffle_animation()
+                    return False
+                else:
+                    self.active = True
             return False
 
         settings.SOUNDS["match"].stop()
@@ -340,8 +392,8 @@ class PlayState(BaseState):
 
         falling_tiles = self.board.get_falling_tiles()
 
-        if not self.board.has_matches():
-            self.board.shuffle_board()
+        # if not self.board.has_matches():
+        #     self._trigger_shuffle_animation()
 
         Timer.tween(
             0.25,
@@ -352,3 +404,34 @@ class PlayState(BaseState):
         )
 
         return True
+
+    def _trigger_shuffle_animation(self) -> None:
+        """Inicia la coreografía de reorganización."""
+        self.active = False
+
+        # Timer.paused = True
+
+        # 2. Preparamos el texto que vamos a dibujar
+        self.shuffle_text = "Barajeando"
+        
+        Timer.tween(
+            1,
+            [(self, {"overlay_alpha": 255})],
+            on_finish=self._reorganize_in_the_dark
+        )
+
+    def _reorganize_in_the_dark(self) -> None:
+        """Mezcla el tablero de forma instantánea mientras la pantalla está negra."""
+
+        self.board.shuffle_board()
+
+        Timer.tween(
+            1,
+            [(self, {"overlay_alpha": 0})],
+            on_finish=self._finish_shuffle
+        )
+
+    def _finish_shuffle(self) -> None:
+        """Devuelve el control al jugador."""
+        self.active = True
+        # Timer.paused = False

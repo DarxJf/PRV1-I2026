@@ -197,7 +197,6 @@ class Board:
         for j in range(settings.BOARD_WIDTH):
             for i in range(settings.BOARD_HEIGHT):
                 tile = self.tiles[i][j]
-
                 if tile is None:
                     tile = Tile(
                         i,
@@ -261,7 +260,7 @@ class Board:
 
     def shuffle_board(self) -> None:
         for row in self.tiles:
-            if None is row:
+            if None in row:
                 return
             
         while True:
@@ -299,11 +298,11 @@ class Board:
             if self.has_matches():
                 break
 
-        tweens = []
-        for i in range(settings.BOARD_HEIGHT):
-            for j in range(settings.BOARD_WIDTH):
-                tile = self.tiles[i][j]
-                tweens.append((tile, {"x": j * settings.TILE_SIZE, "y": i * settings.TILE_SIZE}))
+        # tweens = []
+        # for i in range(settings.BOARD_HEIGHT):
+        #     for j in range(settings.BOARD_WIDTH):
+        #         tile = self.tiles[i][j]
+        #         tweens.append((tile, {"x": j * settings.TILE_SIZE, "y": i * settings.TILE_SIZE}))
         
-        # Asegúrate de tener importado Timer en Board.py
-        Timer.tween(0.5, tweens)
+        # # Asegúrate de tener importado Timer en Board.py
+        # Timer.tween(1, tweens)
